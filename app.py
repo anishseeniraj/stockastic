@@ -1,30 +1,37 @@
-from flask import Flask, render_template, url_for
+from flask import Flask, render_template, url_for, request, redirect
 
-app = Flask(__name__)
+app = Flask(__name__, template_folder="templates")
 
 
 @app.route("/")
 def root():
-    return "Welcome to Stockastic!"
+    return render_template("index.html")
 
 
-@app.route("/TICKER/models")
-def index():
-    return "Requested prediction models"
+@app.route("/ticker", methods=["POST"])
+def ticker():
+    ticker = request.form["ticker"]
+
+    return redirect("/" + ticker + "/models")
 
 
-@app.route("/TICKER/model/MODEL_NAME")
-def show():
+@app.route("/<ticker>/models")
+def index(ticker):
+    return render_template("models.html", ticker=ticker)
+
+
+@app.route("/<ticker>/model/<model_name>")
+def show(ticker, model_name):
     return "Descriptive look at model"
 
 
-@app.route("/TICKER/model/MODEL_NAME/train")
-def train():
+@app.route("/<ticker>/model/<model_name>/train")
+def train(ticker, model_name):
     return "Train the MODEL_NAME model by tuning the following hyperparameters"
 
 
-@app.route("/TICKER/model/MODEL_NAME/predict")
-def predict():
+@app.route("/<ticker>/model/<model_name>/predict")
+def predict(ticker, model_name):
     return "Predict price of TICKER at a custom date"
 
 

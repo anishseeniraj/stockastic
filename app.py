@@ -32,11 +32,17 @@ def index(ticker):
         low=df["Low"],
         close=df["Close"])]
     graphJSON = json.dumps(data, cls=plotly.utils.PlotlyJSONEncoder)
+    fig = [go.Scatter(
+        x=df["Date"],
+        y=df["Close"]
+    )]
+    graphJSON2 = json.dumps(fig, cls=plotly.utils.PlotlyJSONEncoder)
 
     return render_template(
-        "models.html",
+        "models.html.jinja",
         ticker=ticker,
-        graphJSON=graphJSON)
+        plot=graphJSON,
+        plot2=graphJSON2)
 
 
 @app.route("/<ticker>/model/<model_name>")

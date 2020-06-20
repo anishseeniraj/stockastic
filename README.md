@@ -12,4 +12,5 @@
 <ul>
   <li>Figure out custom date for fetching past 5 years stock data instead of hard coding the date into the URL</li>
   <li>Implement Feature Engineering for the Linear Regression model</li>
+  <li>Document how to deal with dates while using a linear model for model.fit()</li>
 </ul>

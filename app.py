@@ -4,6 +4,7 @@ import numpy as np
 import plotly
 import plotly.graph_objects as go
 import json
+import datetime as dt
 
 app = Flask(__name__, template_folder="templates")
 
@@ -26,7 +27,7 @@ def index(ticker):
         "?period1=1434326400&period2=1592179200&interval=1d&events=history"
     df = pd.read_csv(csv_url)
 
-    # Plot for the original trend
+    # Original Trend
     data = [go.Candlestick(
         x=df["Date"],
         open=df["Open"],
@@ -48,8 +49,6 @@ def index(ticker):
         new_data['Date'][i] = data['Date'][i]
         new_data['Close'][i] = data['Close'][i]
 
-    # note: While splitting the data into train and validation set, we cannot use random splitting since that will destroy the time component. So here we have set the last year’s data into validation and the 4 years’ data before that into train set.
-
     # splitting into train and validation
     train = new_data[:987]
     valid = new_data[987:]
@@ -70,14 +69,14 @@ def index(ticker):
         x=df["Date"],
         y=train["Close"],
         mode="lines",
-        name="Training Set Close Prices"
+        name="Training"
     ))
 
     fig_ma.add_trace(go.Scatter(
         x=df["Date"][987:],
         y=valid["Close"],
         mode="lines",
-        name="Validation Set Close Prices"
+        name="Validation"
     ))
 
     fig_ma.add_trace(go.Scatter(
@@ -87,17 +86,63 @@ def index(ticker):
         name="Predictions"
     ))
 
-    # fig = [go.Scatter(
-    #     x=df["Date"],
-    #     y=train["Close"]
-    # )]
     graphJSON2 = json.dumps(fig_ma, cls=plotly.utils.PlotlyJSONEncoder)
+
+    # Linear Regression
+    new_data["Date"] = pd.to_datetime(new_data["Date"])
+    new_data["Date"] = new_data["Date"].map(dt.datetime.toordinal)
+    train = new_data[:987]
+    valid = new_data[987:]
+    preds = []
+
+    x_train = train.drop("Close", axis=1)
+    y_train = train["Close"]
+    x_valid = valid.drop("Close", axis=1)
+    y_valid = valid["Close"]
+
+    from sklearn.linear_model import LinearRegression
+
+    linear_model = LinearRegression()
+    linear_model.fit(x_train, y_train)
+
+    preds = linear_model.predict(x_valid)
+    valid['Predictions'] = 0
+    valid['Predictions'] = preds
+
+    valid.index = new_data[987:].index
+    train.index = new_data[:987].index
+    fig_lm = go.Figure()
+
+    fig_lm.add_trace(go.Scatter(
+        x=df["Date"],
+        y=train["Close"],
+        mode="lines",
+        name="Training"
+    ))
+
+    fig_lm.add_trace(go.Scatter(
+        x=df["Date"][987:],
+        y=valid["Close"],
+        mode="lines",
+        name="Validation"
+    ))
+
+    fig_lm.add_trace(go.Scatter(
+        x=df["Date"][987:],
+        y=valid["Predictions"],
+        mode="lines",
+        name="Predictions"
+    ))
+
+    graphJSON3 = json.dumps(fig_lm, cls=plotly.utils.PlotlyJSONEncoder)
 
     return render_template(
         "models.html.jinja",
         ticker=ticker,
         plot=graphJSON,
-        plot2=graphJSON2)
+        plot2=graphJSON2,
+        plot3=graphJSON3
+    )
 
 
 @app.route("/<ticker>/model/<model_name>")

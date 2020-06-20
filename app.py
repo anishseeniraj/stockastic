@@ -184,13 +184,58 @@ def index(ticker):
 
     graphJSON4 = json.dumps(fig_knn, cls=plotly.utils.PlotlyJSONEncoder)
 
+    # Auto-ARIMA
+    import pmdarima as pm
+
+    data = df.sort_index(ascending=True, axis=0)
+
+    train = data[:987]
+    valid = data[987:]
+
+    training = train['Close']
+    validation = valid['Close']
+
+    arima_model = pm.arima.auto_arima(training, start_p=1, start_q=1, max_p=3, max_q=3, m=12, start_P=0,
+                                      seasonal=True, d=1, D=1, trace=True, error_action='ignore', suppress_warnings=True)
+
+    arima_model.fit(training)
+
+    arima_forecast = arima_model.predict(n_periods=272)
+    arima_forecast = pd.DataFrame(
+        arima_forecast, index=valid.index, columns=['Prediction'])
+    fig_arima = go.Figure()
+
+    fig_arima.add_trace(go.Scatter(
+        x=df["Date"],
+        y=train["Close"],
+        mode="lines",
+        name="Training"
+    ))
+
+    fig_arima.add_trace(go.Scatter(
+        x=df["Date"][987:],
+        y=valid["Close"],
+        mode="lines",
+        name="Validation"
+    ))
+
+    fig_arima.add_trace(go.Scatter(
+        x=df["Date"][987:],
+        y=arima_forecast["Prediction"],
+        mode="lines",
+        name="Predictions"
+    ))
+
+    graphJSON5 = json.dumps(fig_arima, cls=plotly.utils.PlotlyJSONEncoder)
+
     return render_template(
         "models.html.jinja",
         ticker=ticker,
         plot=graphJSON,
         plot2=graphJSON2,
         plot3=graphJSON3,
-        plot4=graphJSON4
+        plot4=graphJSON4,
+        plot5=graphJSON5
     )
 
 

@@ -136,12 +136,61 @@ def index(ticker):
 
     graphJSON3 = json.dumps(fig_lm, cls=plotly.utils.PlotlyJSONEncoder)
 
+    # k-Nearest Neighbors
+    from sklearn import neighbors
+    from sklearn.model_selection import GridSearchCV
+    from sklearn.preprocessing import MinMaxScaler
+
+    scaler = MinMaxScaler(feature_range=(0, 1))
+
+    # scaling data
+    x_train_scaled = scaler.fit_transform(x_train)
+    x_train = pd.DataFrame(x_train_scaled)
+    x_valid_scaled = scaler.fit_transform(x_valid)
+    x_valid = pd.DataFrame(x_valid_scaled)
+
+    # using gridsearch to find the best parameter
+    params = {'n_neighbors': [2, 3, 4, 5, 6, 7, 8, 9]}
+    knn = neighbors.KNeighborsRegressor()
+    knn_model = GridSearchCV(knn, params, cv=5)
+
+    # fit the model and make predictions
+    knn_model.fit(x_train, y_train)
+    preds = knn_model.predict(x_valid)
+    valid["Predictions"] = 0
+    valid["Predictions"] = preds
+    fig_knn = go.Figure()
+
+    fig_knn.add_trace(go.Scatter(
+        x=df["Date"],
+        y=train["Close"],
+        mode="lines",
+        name="Training"
+    ))
+
+    fig_knn.add_trace(go.Scatter(
+        x=df["Date"][987:],
+        y=valid["Close"],
+        mode="lines",
+        name="Validation"
+    ))
+
+    fig_knn.add_trace(go.Scatter(
+        x=df["Date"][987:],
+        y=valid["Predictions"],
+        mode="lines",
+        name="Predictions"
+    ))
+
+    graphJSON4 = json.dumps(fig_knn, cls=plotly.utils.PlotlyJSONEncoder)
+
     return render_template(
         "models.html.jinja",
         ticker=ticker,
         plot=graphJSON,
         plot2=graphJSON2,
-        plot3=graphJSON3
+        plot3=graphJSON3,
+        plot4=graphJSON4
     )
 
 

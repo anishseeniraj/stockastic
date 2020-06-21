@@ -12,23 +12,25 @@
 
     <h3>5 Year Performance</h3>
 
-    <div class="chart" id="candlestick">
+    <div class="chart" id="plot_historic">
       <script>
-        var graphs = {{plot | safe}};
+        var graphs = {{historic_plot | safe}};
 
-        Plotly.plot("candlestick", graphs, {});
+        Plotly.plot("plot_historic", graphs, {});
       </script>
     </div>
 
     <h3>Moving Average</h3>
     
-    <div class="chart" id="scatter">
+    <div class="chart" id="plot_ma">
       <script>
-        var graphs = {{plot2 | safe}};
+        var graphs = {{moving_average_plot | safe}};
 
-        Plotly.plot("scatter", graphs, {});
+        Plotly.plot("plot_ma", graphs, {});
       </script>
     </div>
+
+    <a href="{{ticker}}/ma/customize">Build your own Moving Average model</a>
 
     <h3>Linear Regression</h3>
     

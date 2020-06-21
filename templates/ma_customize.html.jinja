@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Customize Moving Average Model</title>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.6/d3.min.js"></script>
+  </head>
+  <body>
+    <h1>Customize Moving Average Model for {{ticker}}</h1>
+
+    <p>
+      Customize your {{ticker}} moving average model by changing the window of
+      days considered while calculating the moving average. Read more about
+      moving averages <a>here</a>.
+    </p>
+
+    <form action="/ma/customize" method="POST">
+      <label
+        >Enter the number of days you want in your moving average window
+        here</label
+      >
+      <input type="number" placeholder="Ex. - 277" name="window" />
+      <input type="hidden" name="ticker" value="{{ticker}}" />
+      <input type="submit" />
+    </form>
+
+    <div class="chart" id="plot_ma">
+      <script>
+        var graphs = {{moving_average_plot | safe}};
+
+        Plotly.plot("plot_ma", graphs, {});
+      </script>
+    </div>
+
+    <p>Current moving average window - {{window}}</p>
+  </body>
+</html>

@@ -21,6 +21,15 @@ def ticker():
     return redirect("/" + ticker + "/models")
 
 
+def read_historic_data(ticker):
+    # Reading in stock data from Yahoo Finance
+    csv_url = "https://query1.finance.yahoo.com/v7/finance/download/" + ticker + \
+        "?period1=1434326400&period2=1592179200&interval=1d&events=history"
+    df = pd.read_csv(csv_url)
+
+    return df
+
+
 def historic_model(df):
     # Original Trend
     data = [go.Candlestick(
@@ -92,12 +101,10 @@ def moving_average_model(df, window=225):
 
 @app.route("/<ticker>/models")
 def index(ticker):
-    # Reading in stock data from Yahoo Finance
-    csv_url = "https://query1.finance.yahoo.com/v7/finance/download/" + ticker + \
-        "?period1=1434326400&period2=1592179200&interval=1d&events=history"
-    df = pd.read_csv(csv_url)
+    # Reading stock data
+    df = read_historic_data(ticker)
 
-    # Generating necessary plots
+    # Generating historic and predictve plots
     historic_plot = historic_model(df)
     moving_average_plot = moving_average_model(df, 248)
 
@@ -342,9 +349,30 @@ def index(ticker):
     )
 
 
+@app.route("/<ticker>/ma/customize/<window>")
+def ma_customize_input(ticker, window):
+    df = read_historic_data(ticker)
+    moving_average_plot = moving_average_model(df, int(window))
+
+    return render_template(
+        "ma_customize.html.jinja",
+        ticker=ticker,
+        moving_average_plot=moving_average_plot,
+        window=window
+    )
+
+
+@app.route("/ma/customize", methods=["POST"])
+def ma_customize_output():
+    window = request.form["window"]
+    ticker = request.form["ticker"]
+
+    return redirect("/" + ticker + "/ma/customize/" + window)
+
+
 @app.route("/<ticker>/model/<model_name>")
 def show(ticker, model_name):
-    return "Descriptive look at model"
+    return "Descriptive view of the model"
 
 
 @app.route("/<ticker>/model/<model_name>/train")

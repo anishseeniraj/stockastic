@@ -14,4 +14,5 @@
   <li>Implement Feature Engineering for the Linear Regression model</li>
   <li>Document how to deal with dates while using a linear model for model.fit()</li>
   <li>Add hyperlinks to "read more about x model here"</li>
+  <li>Display the error results (eg. RMSE etc.) in the customize model page</li>
 </ul>

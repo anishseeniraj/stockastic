@@ -44,13 +44,13 @@
 
     <a href="/{{ticker}}/lr/customize/977">Build your own Linear Regression model</a>
 
-    <h3>k-Nearest Neighbors</h3>
+    <h3>K-Nearest Neighbors</h3>
     
-    <div class="chart" id="scatter3">
+    <div class="chart" id="plot_knn">
       <script>
-        var graphs = {{plot4 | safe}};
+        var graphs = {{knn_plot | safe}};
 
-        Plotly.plot("scatter3", graphs, {});
+        Plotly.plot("plot_knn", graphs, {});
       </script>
     </div>
 

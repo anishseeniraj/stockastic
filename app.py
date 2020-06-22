@@ -159,7 +159,7 @@ def linear_regression_model(df, split=977):
     return graphJSON
 
 
-def linear_regression_model(df, split=977):
+def knn_model(df, split=977):
     df['Date'] = pd.to_datetime(df.Date, format='%Y-%m-%d')
     df.index = df['Date']
 
@@ -181,56 +181,6 @@ def linear_regression_model(df, split=977):
     x_valid = valid.drop("Close", axis=1)
     y_valid = valid["Close"]
 
-    from sklearn.linear_model import LinearRegression
-
-    linear_model = LinearRegression()
-    linear_model.fit(x_train, y_train)
-
-    preds = linear_model.predict(x_valid)
-    valid['Predictions'] = 0
-    valid['Predictions'] = preds
-
-    valid.index = new_data[split:].index
-    train.index = new_data[:split].index
-    fig_lm = go.Figure()
-
-    fig_lm.add_trace(go.Scatter(
-        x=df["Date"],
-        y=train["Close"],
-        mode="lines",
-        name="Training"
-    ))
-
-    fig_lm.add_trace(go.Scatter(
-        x=df["Date"][split:],
-        y=valid["Close"],
-        mode="lines",
-        name="Validation"
-    ))
-
-    fig_lm.add_trace(go.Scatter(
-        x=df["Date"][split:],
-        y=valid["Predictions"],
-        mode="lines",
-        name="Predictions"
-    ))
-
-    graphJSON = json.dumps(fig_lm, cls=plotly.utils.PlotlyJSONEncoder)
-
-    return graphJSON
-
-
-@app.route("/<ticker>/models")
-def index(ticker):
-    # Reading stock data
-    df = read_historic_data(ticker)
-
-    # Generating historic and predictve plots
-    historic_plot = historic_model(df)
-    moving_average_plot = moving_average_model(df)
-    linear_regression_plot = linear_regression_model(df)
-
-    # k-Nearest Neighbors
     from sklearn import neighbors
     from sklearn.model_selection import GridSearchCV
     from sklearn.preprocessing import MinMaxScaler
@@ -263,20 +213,34 @@ def index(ticker):
     ))
 
     fig_knn.add_trace(go.Scatter(
-        x=df["Date"][987:],
+        x=df["Date"][split:],
         y=valid["Close"],
         mode="lines",
         name="Validation"
     ))
 
     fig_knn.add_trace(go.Scatter(
-        x=df["Date"][987:],
+        x=df["Date"][split:],
         y=valid["Predictions"],
         mode="lines",
         name="Predictions"
     ))
 
-    graphJSON4 = json.dumps(fig_knn, cls=plotly.utils.PlotlyJSONEncoder)
+    graphJSON = json.dumps(fig_knn, cls=plotly.utils.PlotlyJSONEncoder)
+
+    return graphJSON
+
+
+@app.route("/<ticker>/models")
+def index(ticker):
+    # Reading stock data
+    df = read_historic_data(ticker)
+
+    # Generating historic and predictve plots
+    historic_plot = historic_model(df)
+    moving_average_plot = moving_average_model(df)
+    linear_regression_plot = linear_regression_model(df)
+    knn_plot = knn_model(df)
 
     # # Auto-ARIMA
     # import pmdarima as pm
@@ -420,7 +384,8 @@ def index(ticker):
         ticker=ticker,
         historic_plot=historic_plot,
         moving_average_plot=moving_average_plot,
-        linear_regression_plot=linear_regression_plot
+        linear_regression_plot=linear_regression_plot,
+        knn_plot=knn_plot
     )
 
 

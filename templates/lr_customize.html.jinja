@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Customize Linear Regression Model</title>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.6/d3.min.js"></script>
+  </head>
+  <body>
+    <h1>Customize Linear Regression Model for {{ticker}}</h1>
+
+    <p>
+      Customize your {{ticker}} linear regression model by changing the train-test split ratio. Read more about linear regression
+      <a>here</a>.
+    </p>
+
+    <form action="/lr/customize" method="POST">
+      <p>
+        <label
+          >Enter the number of data points you want in your training set</label
+        >
+        <input type="number" placeholder="Ex. 777" name="split" />
+      </p>
+
+      <input type="hidden" name="ticker" value="{{ticker}}" />
+      <input type="submit" />
+    </form>
+
+    <div class="chart" id="plot_lr">
+      <script>
+        var graphs = {{linear_regression_plot | safe}};
+
+        Plotly.plot("plot_lr", graphs, {});
+      </script>
+    </div>
+
+    <p>Current training data points - {{split}}/1260</p>
+  </body>
+</html>

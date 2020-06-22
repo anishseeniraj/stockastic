@@ -386,6 +386,27 @@ def ma_customize_output():
     return redirect("/" + ticker + "/ma/customize/" + window + "/" + split)
 
 
+@app.route("/<ticker>/lr/customize/<split>")
+def lr_customize_input(ticker, split):
+    df = read_historic_data(ticker)
+    linear_regression_plot = linear_regression_model(df, int(split))
+
+    return render_template(
+        "lr_customize.html.jinja",
+        ticker=ticker,
+        linear_regression_plot=linear_regression_plot,
+        split=split
+    )
+
+
+@app.route("/lr/customize", methods=["POST"])
+def lr_customize_output():
+    ticker = request.form["ticker"]
+    split = request.form["split"]
+
+    return redirect("/" + ticker + "/lr/customize/" + split)
+
+
 @app.route("/<ticker>/model/<model_name>")
 def show(ticker, model_name):
     return "Descriptive view of the model"

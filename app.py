@@ -159,6 +159,67 @@ def linear_regression_model(df, split=977):
     return graphJSON
 
 
+def linear_regression_model(df, split=977):
+    df['Date'] = pd.to_datetime(df.Date, format='%Y-%m-%d')
+    df.index = df['Date']
+
+    # creating dataframe with date and the target variable
+    data = df.sort_index(ascending=True, axis=0)
+    new_data = pd.DataFrame(index=range(0, len(df)), columns=['Date', 'Close'])
+
+    for i in range(0, len(data)):
+        new_data['Date'][i] = data['Date'][i]
+        new_data['Close'][i] = data['Close'][i]
+
+    new_data["Date"] = pd.to_datetime(new_data["Date"])
+    new_data["Date"] = new_data["Date"].map(dt.datetime.toordinal)
+    train = new_data[:split]
+    valid = new_data[split:]
+    preds = []
+    x_train = train.drop("Close", axis=1)
+    y_train = train["Close"]
+    x_valid = valid.drop("Close", axis=1)
+    y_valid = valid["Close"]
+
+    from sklearn.linear_model import LinearRegression
+
+    linear_model = LinearRegression()
+    linear_model.fit(x_train, y_train)
+
+    preds = linear_model.predict(x_valid)
+    valid['Predictions'] = 0
+    valid['Predictions'] = preds
+
+    valid.index = new_data[split:].index
+    train.index = new_data[:split].index
+    fig_lm = go.Figure()
+
+    fig_lm.add_trace(go.Scatter(
+        x=df["Date"],
+        y=train["Close"],
+        mode="lines",
+        name="Training"
+    ))
+
+    fig_lm.add_trace(go.Scatter(
+        x=df["Date"][split:],
+        y=valid["Close"],
+        mode="lines",
+        name="Validation"
+    ))
+
+    fig_lm.add_trace(go.Scatter(
+        x=df["Date"][split:],
+        y=valid["Predictions"],
+        mode="lines",
+        name="Predictions"
+    ))
+
+    graphJSON = json.dumps(fig_lm, cls=plotly.utils.PlotlyJSONEncoder)
+
+    return graphJSON
+
+
 @app.route("/<ticker>/models")
 def index(ticker):
     # Reading stock data
@@ -169,53 +230,53 @@ def index(ticker):
     moving_average_plot = moving_average_model(df)
     linear_regression_plot = linear_regression_model(df)
 
-    # # k-Nearest Neighbors
-    # from sklearn import neighbors
-    # from sklearn.model_selection import GridSearchCV
-    # from sklearn.preprocessing import MinMaxScaler
+    # k-Nearest Neighbors
+    from sklearn import neighbors
+    from sklearn.model_selection import GridSearchCV
+    from sklearn.preprocessing import MinMaxScaler
 
-    # scaler = MinMaxScaler(feature_range=(0, 1))
+    scaler = MinMaxScaler(feature_range=(0, 1))
 
-    # # scaling data
-    # x_train_scaled = scaler.fit_transform(x_train)
-    # x_train = pd.DataFrame(x_train_scaled)
-    # x_valid_scaled = scaler.fit_transform(x_valid)
-    # x_valid = pd.DataFrame(x_valid_scaled)
+    # scaling data
+    x_train_scaled = scaler.fit_transform(x_train)
+    x_train = pd.DataFrame(x_train_scaled)
+    x_valid_scaled = scaler.fit_transform(x_valid)
+    x_valid = pd.DataFrame(x_valid_scaled)
 
-    # # using gridsearch to find the best parameter
-    # params = {'n_neighbors': [2, 3, 4, 5, 6, 7, 8, 9]}
-    # knn = neighbors.KNeighborsRegressor()
-    # knn_model = GridSearchCV(knn, params, cv=5)
+    # using gridsearch to find the best parameter
+    params = {'n_neighbors': [2, 3, 4, 5, 6, 7, 8, 9]}
+    knn = neighbors.KNeighborsRegressor()
+    knn_model = GridSearchCV(knn, params, cv=5)
 
-    # # fit the model and make predictions
-    # knn_model.fit(x_train, y_train)
-    # preds = knn_model.predict(x_valid)
-    # valid["Predictions"] = 0
-    # valid["Predictions"] = preds
-    # fig_knn = go.Figure()
+    # fit the model and make predictions
+    knn_model.fit(x_train, y_train)
+    preds = knn_model.predict(x_valid)
+    valid["Predictions"] = 0
+    valid["Predictions"] = preds
+    fig_knn = go.Figure()
 
-    # fig_knn.add_trace(go.Scatter(
-    #     x=df["Date"],
-    #     y=train["Close"],
-    #     mode="lines",
-    #     name="Training"
-    # ))
+    fig_knn.add_trace(go.Scatter(
+        x=df["Date"],
+        y=train["Close"],
+        mode="lines",
+        name="Training"
+    ))
 
-    # fig_knn.add_trace(go.Scatter(
-    #     x=df["Date"][987:],
-    #     y=valid["Close"],
-    #     mode="lines",
-    #     name="Validation"
-    # ))
+    fig_knn.add_trace(go.Scatter(
+        x=df["Date"][987:],
+        y=valid["Close"],
+        mode="lines",
+        name="Validation"
+    ))
 
-    # fig_knn.add_trace(go.Scatter(
-    #     x=df["Date"][987:],
-    #     y=valid["Predictions"],
-    #     mode="lines",
-    #     name="Predictions"
-    # ))
+    fig_knn.add_trace(go.Scatter(
+        x=df["Date"][987:],
+        y=valid["Predictions"],
+        mode="lines",
+        name="Predictions"
+    ))
 
-    # graphJSON4 = json.dumps(fig_knn, cls=plotly.utils.PlotlyJSONEncoder)
+    graphJSON4 = json.dumps(fig_knn, cls=plotly.utils.PlotlyJSONEncoder)
 
     # # Auto-ARIMA
     # import pmdarima as pm

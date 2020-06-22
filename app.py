@@ -43,10 +43,9 @@ def historic_model(df):
     return graphJSON
 
 
-def moving_average_model(df, window=225):
+def moving_average_model(df, window=225, split=977):
     # Moving Average
     df['Date'] = pd.to_datetime(df.Date, format='%Y-%m-%d')
-
     df.index = df['Date']
 
     # creating dataframe with date and the target variable
@@ -58,8 +57,8 @@ def moving_average_model(df, window=225):
         new_data['Close'][i] = data['Close'][i]
 
     # splitting into train and validation
-    train = new_data[:987]
-    valid = new_data[987:]
+    train = new_data[:split]
+    valid = new_data[split:]
     preds = []
 
     for i in range(0, valid.shape[0]):
@@ -81,20 +80,81 @@ def moving_average_model(df, window=225):
     ))
 
     fig_ma.add_trace(go.Scatter(
-        x=df["Date"][987:],
+        x=df["Date"][split:],
         y=valid["Close"],
         mode="lines",
         name="Validation"
     ))
 
     fig_ma.add_trace(go.Scatter(
-        x=df["Date"][987:],
+        x=df["Date"][split:],
         y=valid["Predictions"],
         mode="lines",
         name="Predictions"
     ))
 
     graphJSON = json.dumps(fig_ma, cls=plotly.utils.PlotlyJSONEncoder)
+
+    return graphJSON
+
+
+def linear_regression_model(df, split=977):
+    df['Date'] = pd.to_datetime(df.Date, format='%Y-%m-%d')
+    df.index = df['Date']
+
+    # creating dataframe with date and the target variable
+    data = df.sort_index(ascending=True, axis=0)
+    new_data = pd.DataFrame(index=range(0, len(df)), columns=['Date', 'Close'])
+
+    for i in range(0, len(data)):
+        new_data['Date'][i] = data['Date'][i]
+        new_data['Close'][i] = data['Close'][i]
+
+    new_data["Date"] = pd.to_datetime(new_data["Date"])
+    new_data["Date"] = new_data["Date"].map(dt.datetime.toordinal)
+    train = new_data[:split]
+    valid = new_data[split:]
+    preds = []
+    x_train = train.drop("Close", axis=1)
+    y_train = train["Close"]
+    x_valid = valid.drop("Close", axis=1)
+    y_valid = valid["Close"]
+
+    from sklearn.linear_model import LinearRegression
+
+    linear_model = LinearRegression()
+    linear_model.fit(x_train, y_train)
+
+    preds = linear_model.predict(x_valid)
+    valid['Predictions'] = 0
+    valid['Predictions'] = preds
+
+    valid.index = new_data[split:].index
+    train.index = new_data[:split].index
+    fig_lm = go.Figure()
+
+    fig_lm.add_trace(go.Scatter(
+        x=df["Date"],
+        y=train["Close"],
+        mode="lines",
+        name="Training"
+    ))
+
+    fig_lm.add_trace(go.Scatter(
+        x=df["Date"][split:],
+        y=valid["Close"],
+        mode="lines",
+        name="Validation"
+    ))
+
+    fig_lm.add_trace(go.Scatter(
+        x=df["Date"][split:],
+        y=valid["Predictions"],
+        mode="lines",
+        name="Predictions"
+    ))
+
+    graphJSON = json.dumps(fig_lm, cls=plotly.utils.PlotlyJSONEncoder)
 
     return graphJSON
 
@@ -106,55 +166,8 @@ def index(ticker):
 
     # Generating historic and predictve plots
     historic_plot = historic_model(df)
-    moving_average_plot = moving_average_model(df, 248)
-
-    # Linear Regression
-    # new_data["Date"] = pd.to_datetime(new_data["Date"])
-    # new_data["Date"] = new_data["Date"].map(dt.datetime.toordinal)
-    # train = new_data[:987]
-    # valid = new_data[987:]
-    # preds = []
-
-    # x_train = train.drop("Close", axis=1)
-    # y_train = train["Close"]
-    # x_valid = valid.drop("Close", axis=1)
-    # y_valid = valid["Close"]
-
-    # from sklearn.linear_model import LinearRegression
-
-    # linear_model = LinearRegression()
-    # linear_model.fit(x_train, y_train)
-
-    # preds = linear_model.predict(x_valid)
-    # valid['Predictions'] = 0
-    # valid['Predictions'] = preds
-
-    # valid.index = new_data[987:].index
-    # train.index = new_data[:987].index
-    # fig_lm = go.Figure()
-
-    # fig_lm.add_trace(go.Scatter(
-    #     x=df["Date"],
-    #     y=train["Close"],
-    #     mode="lines",
-    #     name="Training"
-    # ))
-
-    # fig_lm.add_trace(go.Scatter(
-    #     x=df["Date"][987:],
-    #     y=valid["Close"],
-    #     mode="lines",
-    #     name="Validation"
-    # ))
-
-    # fig_lm.add_trace(go.Scatter(
-    #     x=df["Date"][987:],
-    #     y=valid["Predictions"],
-    #     mode="lines",
-    #     name="Predictions"
-    # ))
-
-    # graphJSON3 = json.dumps(fig_lm, cls=plotly.utils.PlotlyJSONEncoder)
+    moving_average_plot = moving_average_model(df)
+    linear_regression_plot = linear_regression_model(df)
 
     # # k-Nearest Neighbors
     # from sklearn import neighbors
@@ -345,20 +358,22 @@ def index(ticker):
         "models.html.jinja",
         ticker=ticker,
         historic_plot=historic_plot,
-        moving_average_plot=moving_average_plot
+        moving_average_plot=moving_average_plot,
+        linear_regression_plot=linear_regression_plot
     )
 
 
-@app.route("/<ticker>/ma/customize/<window>")
-def ma_customize_input(ticker, window):
+@app.route("/<ticker>/ma/customize/<window>/<split>")
+def ma_customize_input(ticker, window, split):
     df = read_historic_data(ticker)
-    moving_average_plot = moving_average_model(df, int(window))
+    moving_average_plot = moving_average_model(df, int(window), int(split))
 
     return render_template(
         "ma_customize.html.jinja",
         ticker=ticker,
         moving_average_plot=moving_average_plot,
-        window=window
+        window=window,
+        split=split
     )
 
 
@@ -366,8 +381,9 @@ def ma_customize_input(ticker, window):
 def ma_customize_output():
     window = request.form["window"]
     ticker = request.form["ticker"]
+    split = request.form["split"]
 
-    return redirect("/" + ticker + "/ma/customize/" + window)
+    return redirect("/" + ticker + "/ma/customize/" + window + "/" + split)
 
 
 @app.route("/<ticker>/model/<model_name>")

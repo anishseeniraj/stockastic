@@ -30,17 +30,19 @@
       </script>
     </div>
 
-    <a href="/{{ticker}}/ma/customize/225">Build your own Moving Average model</a>
+    <a href="/{{ticker}}/ma/customize/225/977">Build your own Moving Average model</a>
 
     <h3>Linear Regression</h3>
     
-    <div class="chart" id="scatter2">
+    <div class="chart" id="plot_linear">
       <script>
-        var graphs = {{plot3 | safe}};
+        var graphs = {{linear_regression_plot | safe}};
 
-        Plotly.plot("scatter2", graphs, {});
+        Plotly.plot("plot_linear", graphs, {});
       </script>
     </div>
+
+    <a href="/{{ticker}}/lr/customize">Build your own Linear Regression model</a>
 
     <h3>k-Nearest Neighbors</h3>
     

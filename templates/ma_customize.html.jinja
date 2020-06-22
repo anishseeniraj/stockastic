@@ -17,11 +17,13 @@
     </p>
 
     <form action="/ma/customize" method="POST">
-      <label
+      <p><label
         >Enter the number of days you want in your moving average window
         here</label
       >
-      <input type="number" placeholder="Ex. - 277" name="window" />
+      <input type="number" placeholder="Ex. 277" name="window" /></p>
+      <p><label>Enter the number of data points you want in your training set</label>
+      <input type="number" placeholder= "Ex. 777" name="split"></p>
       <input type="hidden" name="ticker" value="{{ticker}}" />
       <input type="submit" />
     </form>
@@ -35,5 +37,6 @@
     </div>
 
     <p>Current moving average window - {{window}}</p>
+    <p>Current training data points - {{split}}/1260</p>
   </body>
 </html>

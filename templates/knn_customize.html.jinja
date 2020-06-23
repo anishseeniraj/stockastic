@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Customize KNN Model</title>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.6/d3.min.js"></script>
+  </head>
+  <body>
+    <h1>Customize K-Nearest Neighbors Model for {{ticker}}</h1>
+
+    <p>
+      Customize your {{ticker}} K-eighbors Regression model by 
+      <ul>
+        <li>Changing the train-test split ratio for the dataset</li>
+        <li>Changing the number of neighbors to use for <a href="https://scikit-learn.org/stable/modules/generated/sklearn.neighbors.KNeighborsRegressor.html#sklearn.neighbors.KNeighborsRegressor.kneighbors">kneighbors</a> queries</li>
+        <li>Changing the weight function used for prediction</li>
+        <li>Changing the power parameter (p value) for the Minkowski distance metric</li>
+      </ul>
+    </p>
+
+    <form action="/knn/customize" method="POST">
+      <p>
+        <label
+          >Enter the number of data points you want in your training set</label
+        >
+        <input type="number" placeholder="Ex. 777" name="split" />
+      </p>
+
+      <p>
+        <label
+          >Enter the number of neighbors (n_neighbors value)</label
+        >
+        <input type="number" placeholder="Ex. 5" name="neighbors" />
+      </p>
+
+      <p>
+        <label
+          >Select the weight function you want to apply to neighbors </label
+        >
+        <select name="weights" id="">
+          <option value="uniform">Uniform</option>
+          <option value="distance">Distance (inverse)</option>
+        </select>
+      </p>
+
+      <p>
+        <label
+          >Enter the power parameter (p-value) for the Minkowski distance metric used in the model</label
+        >
+        <input type="number" placeholder="Ex. 2" name="power" />
+      </p>
+
+      <input type="hidden" name="ticker" value="{{ticker}}" />
+      <input type="submit" />
+    </form>
+
+    <div class="chart" id="plot_knn">
+      <script>
+        var graphs = {{knn_plot | safe}};
+
+        Plotly.plot("plot_knn", graphs, {});
+      </script>
+    </div>
+
+    <h4>The original parameter values used in the model behind the scenes were determined by using gridsearch</h4>
+    <p>Current training data points - {{split}}/1260</p>
+    <p>Current number of neighbors (K) - {{neighbors}}</p>
+    <p>Current weight function - {{weights}}</p>
+    <p>Current power parameter (p-value for the Minkowski distance metric) - {{power}}</p>
+  </body>
+</html>

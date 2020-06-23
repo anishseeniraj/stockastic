@@ -159,7 +159,7 @@ def linear_regression_model(df, split=977):
     return graphJSON
 
 
-def knn_model(df, split=977):
+def knn_model(df, split=977, n_neighbors=2, weights="distance", p=2):
     df['Date'] = pd.to_datetime(df.Date, format='%Y-%m-%d')
     df.index = df['Date']
 
@@ -202,7 +202,10 @@ def knn_model(df, split=977):
     # }
 
     knn_model = neighbors.KNeighborsRegressor(
-        n_neighbors=2, weights="distance", p=2)
+        n_neighbors=n_neighbors,
+        weights=weights,
+        p=p
+    )
 
     # knn_model = GridSearchCV(knn, params, cv=5)
 
@@ -450,22 +453,28 @@ def lr_customize_output():
 @app.route("/<ticker>/knn/customize/<split>/<neighbors>/<weights>/<power>")
 def knn_customize_input(ticker, split, neighbors, weights, power):
     df = read_historic_data(ticker)
-    linear_regression_plot = linear_regression_model(df, int(split))
+    knn_plot = knn_model(df, int(split), int(neighbors), weights, int(power))
 
     return render_template(
-        "lr_customize.html.jinja",
+        "knn_customize.html.jinja",
         ticker=ticker,
-        linear_regression_plot=linear_regression_plot,
-        split=split
+        knn_plot=knn_plot,
+        split=split,
+        neighbors=neighbors,
+        weights=weights,
+        power=power
     )
 
 
-@app.route("/lr/customize", methods=["POST"])
+@app.route("/knn/customize", methods=["POST"])
 def knn_customize_output():
     ticker = request.form["ticker"]
     split = request.form["split"]
+    neighbors = request.form["neighbors"]
+    weights = request.form["weights"]
+    power = request.form["power"]
 
-    return redirect("/" + ticker + "/lr/customize/" + split)
+    return redirect("/" + ticker + "/knn/customize/" + split + "/" + neighbors + "/" + weights + "/" + power)
 
 
 @app.route("/<ticker>/model/<model_name>")

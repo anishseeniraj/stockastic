@@ -199,7 +199,7 @@ def knn_model(df, split=977):
     knn_model = GridSearchCV(knn, params, cv=5)
 
     # fit the model and make predictions
-    knn_model.fit(x_train, y_train)
+    knn_model.fit(x_train, y_train)  # k = 2
     preds = knn_model.predict(x_valid)
     valid["Predictions"] = 0
     valid["Predictions"] = preds

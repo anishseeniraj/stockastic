@@ -193,13 +193,27 @@ def knn_model(df, split=977):
     x_valid_scaled = scaler.fit_transform(x_valid)
     x_valid = pd.DataFrame(x_valid_scaled)
 
-    # using gridsearch to find the best parameter
-    params = {'n_neighbors': [2, 3, 4, 5, 6, 7, 8, 9]}
-    knn = neighbors.KNeighborsRegressor()
-    knn_model = GridSearchCV(knn, params, cv=5)
+    # using gridsearch to find the best parameter for initial model generation
+
+    # params = {
+    #     "n_neighbors": [2, 3, 4, 5, 6, 7, 8, 9],
+    #     "weights": ["uniform", "distance"],
+    #     "p": [2, 3, 4, 5]
+    # }
+
+    knn_model = neighbors.KNeighborsRegressor(
+        n_neighbors=2, weights="distance", p=2)
+
+    # knn_model = GridSearchCV(knn, params, cv=5)
 
     # fit the model and make predictions
-    knn_model.fit(x_train, y_train)  # k = 2
+    knn_model.fit(x_train, y_train)
+
+    # gridsearch results for original model were -
+    #     n_neighbors = 2
+    #     weights = distance
+    #     minkowski metric (p) = 2
+
     preds = knn_model.predict(x_valid)
     valid["Predictions"] = 0
     valid["Predictions"] = preds
@@ -427,6 +441,27 @@ def lr_customize_input(ticker, split):
 
 @app.route("/lr/customize", methods=["POST"])
 def lr_customize_output():
+    ticker = request.form["ticker"]
+    split = request.form["split"]
+
+    return redirect("/" + ticker + "/lr/customize/" + split)
+
+
+@app.route("/<ticker>/knn/customize/<split>/<neighbors>/<weights>/<power>")
+def knn_customize_input(ticker, split, neighbors, weights, power):
+    df = read_historic_data(ticker)
+    linear_regression_plot = linear_regression_model(df, int(split))
+
+    return render_template(
+        "lr_customize.html.jinja",
+        ticker=ticker,
+        linear_regression_plot=linear_regression_plot,
+        split=split
+    )
+
+
+@app.route("/lr/customize", methods=["POST"])
+def knn_customize_output():
     ticker = request.form["ticker"]
     split = request.form["split"]
 

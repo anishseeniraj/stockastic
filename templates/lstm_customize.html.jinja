@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Customize LSTM Model</title>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.6/d3.min.js"></script>
+  </head>
+  <body>
+    <h1>Customize Long Short-Term Memory model for {{ticker}}</h1>
+
+    <p>
+      Customize your {{ticker}} LSTM model by changing the 
+      <ul>
+        <li>Train-test split ratio for the dataset</li>
+        <li>Number of units to use in each LSTM layer of the neural network </li>
+        <li>Epochs</li>
+      </ul>
+    </p>
+
+    <form action="/lstm/customize" method="POST">
+      <p>
+        <label
+          >Enter the number of data points you want in your training set</label
+        >
+        <input type="number" placeholder="Ex. 777" name="split" />
+      </p>
+
+      <p>
+        <label
+          >Enter the number of units in each layer of the network</label
+        >
+        <input type="number" placeholder="Ex. 5" name="units" />
+      </p>
+
+      <p>
+        <label
+          >Enter the epochs</label
+        >
+        <input type="number" placeholder="Ex. 3" name="epochs">
+        <div><i>
+          Note that changing the epochs will have a considerable impact on the runtime of the algorithm (up to several minutes)
+        </i></div>
+      </p>
+
+      <input type="hidden" name="ticker" value="{{ticker}}" />
+      <input type="submit" />
+    </form>
+
+    <div class="chart" id="plot_lstm">
+      <script>
+        var graphs = {{lstm_plot | safe}};
+
+        Plotly.plot("plot_lstm", graphs, {});
+      </script>
+    </div>
+
+    <p>Current training data points - {{split}}/1260</p>
+    <p>Current number of units - {{units}}</p>
+    <p>Current epochs - {{epochs}}</p>
+  </body>
+</html>

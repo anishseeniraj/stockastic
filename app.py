@@ -295,7 +295,7 @@ def auto_arima_model(df, spit=977):
     return graphJSON
 
 
-def lstm_model(df, split=977):
+def lstm_model(df, split=977, units=50, epochs=1):
     from sklearn.preprocessing import MinMaxScaler
     from keras.models import Sequential
     from keras.layers import Dense, Dropout, LSTM
@@ -334,13 +334,16 @@ def lstm_model(df, split=977):
 
     # create and fit the LSTM network
     model = Sequential()
-    model.add(LSTM(units=50, return_sequences=True,
-                   input_shape=(x_train.shape[1], 1)))
-    model.add(LSTM(units=50))
-    model.add(Dense(1))
+    model.add(LSTM(
+        units=units,
+        return_sequences=True,
+        input_shape=(x_train.shape[1], 1))
+    )
+    model.add(LSTM(units=units))
+    model.add(Dense(1))  # dimensionality of the output
 
     model.compile(loss='mean_squared_error', optimizer='adam')
-    model.fit(x_train, y_train, epochs=1, batch_size=1, verbose=2)
+    model.fit(x_train, y_train, epochs=epochs, batch_size=1, verbose=2)
 
     inputs = new_data[len(new_data) - len(valid) - 60:].values
     inputs = inputs.reshape(-1, 1)
@@ -361,7 +364,6 @@ def lstm_model(df, split=977):
     train = new_data[:split]
     valid = new_data[split:]
     valid['Predictions'] = closing_price
-
     fig_lstm = go.Figure()
 
     fig_lstm.add_trace(go.Scatter(
@@ -408,7 +410,8 @@ def index(ticker):
         historic_plot=historic_plot,
         moving_average_plot=moving_average_plot,
         linear_regression_plot=linear_regression_plot,
-        knn_plot=knn_plot
+        knn_plot=knn_plot,
+        lstm_plot=lstm_plot
     )
 
 
@@ -481,6 +484,31 @@ def knn_customize_output():
     power = request.form["power"]
 
     return redirect("/" + ticker + "/knn/customize/" + split + "/" + neighbors + "/" + weights + "/" + power)
+
+
+@app.route("/<ticker>/lstm/customize/<split>/<units>/<epochs>")
+def lstm_customize_input(ticker, split, units, epochs):
+    df = read_historic_data(ticker)
+    lstm_plot = lstm_model(df, int(split), int(units), int(epochs))
+
+    return render_template(
+        "lstm_customize.html.jinja",
+        ticker=ticker,
+        lstm_plot=lstm_plot,
+        split=split,
+        units=units,
+        epochs=epochs,
+    )
+
+
+@app.route("/lstm/customize", methods=["POST"])
+def lstm_customize_output():
+    ticker = request.form["ticker"]
+    split = request.form["split"]
+    units = request.form["units"]
+    epochs = request.form["epochs"]
+
+    return redirect("/" + ticker + "/lstm/customize/" + split + "/" + units + "/" + epochs)
 
 
 @app.route("/<ticker>/model/<model_name>")

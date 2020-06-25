@@ -248,7 +248,7 @@ def knn_model(df, split=977, n_neighbors=2, weights="distance", p=2):
     return graphJSON
 
 
-def auto_arima_model(df, spit=977):
+def auto_arima_model(df, split=977, start_p=1, max_p=3, start_q=1, max_q=3, d=1, D=1):
     import pmdarima as pm
 
     data = df.sort_index(ascending=True, axis=0)
@@ -259,12 +259,13 @@ def auto_arima_model(df, spit=977):
     training = train['Close']
     validation = valid['Close']
 
-    arima_model = pm.arima.auto_arima(training, start_p=1, start_q=1, max_p=3, max_q=3, m=12, start_P=0,
-                                      seasonal=True, d=1, D=1, trace=True, error_action='ignore', suppress_warnings=True)
+    arima_model = pm.arima.auto_arima(training, start_p=start_p, max_p=max_p, start_q=start_q, max_q=max_q, m=12, start_P=0,
+                                      seasonal=True, d=d, D=D, trace=True, error_action='ignore', suppress_warnings=True)
 
     arima_model.fit(training)
 
-    arima_forecast = arima_model.predict(n_periods=272)
+    arima_forecast = arima_model.predict(
+        n_periods=1260 - split - 1)
     arima_forecast = pd.DataFrame(
         arima_forecast, index=valid.index, columns=['Prediction'])
     fig_arima = go.Figure()
@@ -402,7 +403,8 @@ def index(ticker):
     moving_average_plot = moving_average_model(df)
     linear_regression_plot = linear_regression_model(df)
     knn_plot = knn_model(df)
-    lstm_plot = lstm_model(df)
+    # lstm_plot = lstm_model(df)
+    auto_arima_plot = auto_arima_model(df)
 
     return render_template(
         "models.html.jinja",
@@ -411,7 +413,8 @@ def index(ticker):
         moving_average_plot=moving_average_plot,
         linear_regression_plot=linear_regression_plot,
         knn_plot=knn_plot,
-        lstm_plot=lstm_plot
+        # lstm_plot=lstm_plot,
+        auto_arima_plot=auto_arima_plot
     )
 
 
@@ -509,6 +512,40 @@ def lstm_customize_output():
     epochs = request.form["epochs"]
 
     return redirect("/" + ticker + "/lstm/customize/" + split + "/" + units + "/" + epochs)
+
+
+@app.route("/<ticker>/arima/customize/<split>/<start_p>/<max_p>/<start_q>/<max_q>/<d>/<D>")
+def arima_customize_input(ticker, split, start_p, max_p, start_q, max_q, d, D):
+    df = read_historic_data(ticker)
+    auto_arima_plot = auto_arima_model(df, int(split), int(
+        start_p), int(max_p), int(start_q), int(max_q), int(d), int(D))
+
+    return render_template(
+        "arima_customize.html.jinja",
+        ticker=ticker,
+        auto_arima_plot=auto_arima_plot,
+        split=split,
+        start_p=start_p,
+        max_p=max_p,
+        start_q=start_q,
+        max_q=max_q,
+        d=d,
+        D=D
+    )
+
+
+@app.route("/arima/customize", methods=["POST"])
+def arima_customize_output():
+    ticker = request.form["ticker"]
+    split = request.form["split"]
+    start_p = request.form["start_p"]
+    max_p = request.form["max_p"]
+    start_q = request.form["start_q"]
+    max_q = request.form["max_q"]
+    d = request.form["d"]
+    D = request.form["D"]
+
+    return redirect("/" + ticker + "/arima/customize/" + split + "/" + start_p + "/" + max_p + "/" + start_q + "/" + max_q + "/" + d + "/" + D)
 
 
 @app.route("/<ticker>/model/<model_name>")

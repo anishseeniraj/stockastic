@@ -67,5 +67,17 @@
     </div>
 
     <a href="/{{ticker}}/lstm/customize/977/50/1">Build your own LSTM model</a>
+
+    <h3>Auto-ARIMA</h3>
+    
+    <div class="chart" id="plot_auto_arima">
+      <script>
+        var graphs = {{auto_arima_plot | safe}};
+
+        Plotly.plot("plot_auto_arima", graphs, {});
+      </script>
+    </div>
+
+    <a href="/{{ticker}}/arima/customize/977/1/3/1/3/1/1">Build your own Auto-ARIMA</a>
   </body>
 </html>

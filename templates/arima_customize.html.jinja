@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Customize Auto-ARIMA Model</title>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.6/d3.min.js"></script>
+  </head>
+  <body>
+    <h1>Customize Auto-ARIMA model for {{ticker}}</h1>
+
+    <p>
+      It takes extended periods of time to tune the hyperparameters of individual ARIMA models, so I'm using an Auto-ARIMA model which will let you input a range of values for the hyperparameters (listed below) from which it will pick the optimal ones.
+    </p>
+    <ul> 
+      <li>p - Past values used for forecasting future values</li>
+      <li>q - Forecast errors in predicting future values based on p</li>
+      <li>d - Order of first-differencing</li>
+      <li>D - Order of seasonal-differencing</li>
+    </ul>
+    <p>
+      Customize your {{ticker}} Auto-ARIMA model by changing the 
+      <ul>
+        <li>Train-test split ratio for the dataset</li>
+        <li>Range of p to find the optimal value</li>
+        <li>Range of q to find the optimal value</li>
+        <li>d value</li>
+        <li>D value</li>
+      </ul>
+    </p>
+
+    <form action="/arima/customize" method="POST">
+      <p>
+        <label
+          >Enter the number of data points you want in your training set</label
+        >
+        <input type="number" placeholder="Ex. 777" name="split" />
+      </p>
+
+      <p>
+        <label
+          >Enter the range of p values</label
+        >
+        <input type="number" placeholder="Ex. 1" name="start_p" /> to <input type="number" placeholder="Ex. 3" name="max_p" />
+      </p>
+
+      <p>
+        <label
+          >Enter the range of q values</label
+        >
+        <input type="number" placeholder="Ex. 1" name="start_q" /> to <input type="number" placeholder="Ex. 3" name="max_q" />
+      </p>
+
+      <p>
+        <label
+          >Enter the d value</label
+        >
+        <input type="number" placeholder="Ex. 1" name="d">
+      </p>
+
+      <p>
+        <label
+          >Enter the D value</label
+        >
+        <input type="number" placeholder="Ex. 1" name="D">
+      </p>
+
+      <input type="hidden" name="ticker" value="{{ticker}}" />
+      <input type="submit" />
+    </form>
+
+    <div class="chart" id="plot_auto_arima">
+      <script>
+        var graphs = {{auto_arima_plot | safe}};
+
+        Plotly.plot("plot_auto_arima", graphs, {});
+      </script>
+    </div>
+
+    <p>Current training data points - {{split}}/1260</p>
+    <p>Current range of p is {{start_p}} - {{max_p}}</p>
+    <p>Current range of q is {{start_q}} - {{max_q}}</p>
+    <p>Current d value - {{d}}</p>
+    <p>Current D value - {{D}}</p>
+  </body>
+</html>

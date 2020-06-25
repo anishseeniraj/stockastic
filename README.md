@@ -13,6 +13,7 @@
 <ul>
   <li>Figure out custom date for fetching past 5 years stock data instead of hard coding the date into the URL</li>
   <li>Implement Feature Engineering for the Linear Regression model</li>
+  <li>Allow the user to select which models to display in the models route</li>
   <li>Document how to deal with dates while using a linear model for model.fit()</li>
   <li>Add hyperlinks to "read more about x model here"</li>
   <li>Display the error results (eg. RMSE etc.) in the customize model page</li>

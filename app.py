@@ -25,6 +25,12 @@ def read_historic_data(ticker):
     # Reading in stock data from Yahoo Finance
     csv_url = "https://query1.finance.yahoo.com/v7/finance/download/" + ticker + \
         "?period1=1434326400&period2=1592179200&interval=1d&events=history"
+
+    # Custom date solution
+    # print(int(datetime(2020, 6, 25, 0, 0).replace(tzinfo=timezone.utc).timestamp()))
+    # print(int((datetime(2020, 6, 25, 0, 0) - relativedelta(years=5)).replace(tzinfo=timezone.utc).timestamp()))
+    # Obtain the python date as a string, strip the string into parts, typecase to int, pass the int into the above print statements
+    # Refactor date stripper into a helper
     df = pd.read_csv(csv_url)
 
     return df

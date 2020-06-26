@@ -234,6 +234,7 @@ def knn_model(df, split=977, n_neighbors=2, weights="distance", p=2):
     #     minkowski metric (p) = 2
 
     preds = knn_model.predict(x_valid)
+    rmse = np.sqrt(np.mean(np.power((np.array(y_valid) - np.array(preds)), 2)))
     valid["Predictions"] = 0
     valid["Predictions"] = preds
     fig_knn = go.Figure()
@@ -261,7 +262,7 @@ def knn_model(df, split=977, n_neighbors=2, weights="distance", p=2):
 
     graphJSON = json.dumps(fig_knn, cls=plotly.utils.PlotlyJSONEncoder)
 
-    return graphJSON
+    return graphJSON, round(rmse, 2)
 
 
 def auto_arima_model(df, split=977, start_p=1, max_p=3, start_q=1, max_q=3, d=1, D=1):
@@ -418,7 +419,7 @@ def index(ticker):
     historic_plot = historic_model(df)
     moving_average_plot, ma_rmse = moving_average_model(df)
     linear_regression_plot, lr_rmse = linear_regression_model(df)
-    knn_plot = knn_model(df)
+    knn_plot, knn_rmse = knn_model(df)
     # lstm_plot = lstm_model(df)
     # auto_arima_plot = auto_arima_model(df)
 
@@ -484,12 +485,14 @@ def lr_customize_output():
 @app.route("/<ticker>/knn/customize/<split>/<neighbors>/<weights>/<power>")
 def knn_customize_input(ticker, split, neighbors, weights, power):
     df = read_historic_data(ticker)
-    knn_plot = knn_model(df, int(split), int(neighbors), weights, int(power))
+    knn_plot, rmse = knn_model(
+        df, int(split), int(neighbors), weights, int(power))
 
     return render_template(
         "knn_customize.html.jinja",
         ticker=ticker,
         knn_plot=knn_plot,
+        rmse=rmse,
         split=split,
         neighbors=neighbors,
         weights=weights,

@@ -4,7 +4,9 @@ import numpy as np
 import plotly
 import plotly.graph_objects as go
 import json
-import datetime as dt
+from datetime import datetime
+from datetime import timezone
+from dateutil.relativedelta import relativedelta
 
 app = Flask(__name__, template_folder="templates")
 
@@ -22,9 +24,25 @@ def ticker():
 
 
 def read_historic_data(ticker):
-    # Reading in stock data from Yahoo Finance
+    # Unix timestamp calculation for today's date and five years ago
+
+    date_today = datetime.today().strftime("%Y-%m-%d")
+    dtc = date_today.split("-")
+    date_five_years_ago = (
+        datetime.today() - relativedelta(years=5)).strftime("%Y-%m-%d")
+    dfyc = date_five_years_ago.split("-")
+    timestamp_today = int(datetime(int(dtc[0]), int(dtc[1]), int(
+        dtc[2]), 0, 0).replace(tzinfo=timezone.utc).timestamp())
+    timestamp_five_years_ago = int((datetime(int(dfyc[0]), int(dfyc[1]), int(
+        dfyc[2]), 0, 0)).replace(tzinfo=timezone.utc).timestamp())
+
+    print(timestamp_today)
+    print(timestamp_five_years_ago)
+
+    # Reading in stock data from Yahoo Finance in the above timestamps' range
     csv_url = "https://query1.finance.yahoo.com/v7/finance/download/" + ticker + \
-        "?period1=1434326400&period2=1592179200&interval=1d&events=history"
+        "?period1=" + str(timestamp_five_years_ago) + "&period2=" + \
+        str(timestamp_today) + "&interval=1d&events=history"
 
     # Custom date solution
     # print(int(datetime(2020, 6, 25, 0, 0).replace(tzinfo=timezone.utc).timestamp()))
@@ -117,7 +135,7 @@ def linear_regression_model(df, split=977):
         new_data['Close'][i] = data['Close'][i]
 
     new_data["Date"] = pd.to_datetime(new_data["Date"])
-    new_data["Date"] = new_data["Date"].map(dt.datetime.toordinal)
+    new_data["Date"] = new_data["Date"].map(datetime.toordinal)
     train = new_data[:split]
     valid = new_data[split:]
     preds = []
@@ -178,7 +196,7 @@ def knn_model(df, split=977, n_neighbors=2, weights="distance", p=2):
         new_data['Close'][i] = data['Close'][i]
 
     new_data["Date"] = pd.to_datetime(new_data["Date"])
-    new_data["Date"] = new_data["Date"].map(dt.datetime.toordinal)
+    new_data["Date"] = new_data["Date"].map(datetime.toordinal)
     train = new_data[:split]
     valid = new_data[split:]
     preds = []
@@ -410,7 +428,7 @@ def index(ticker):
     linear_regression_plot = linear_regression_model(df)
     knn_plot = knn_model(df)
     # lstm_plot = lstm_model(df)
-    auto_arima_plot = auto_arima_model(df)
+    # auto_arima_plot = auto_arima_model(df)
 
     return render_template(
         "models.html.jinja",
@@ -418,9 +436,9 @@ def index(ticker):
         historic_plot=historic_plot,
         moving_average_plot=moving_average_plot,
         linear_regression_plot=linear_regression_plot,
-        knn_plot=knn_plot,
+        knn_plot=knn_plot
         # lstm_plot=lstm_plot,
-        auto_arima_plot=auto_arima_plot
+        # auto_arima_plot=auto_arima_plot
     )
 
 

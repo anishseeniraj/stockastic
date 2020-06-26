@@ -110,7 +110,7 @@ def moving_average_model(df, window=225, split=977):
 
     graphJSON = json.dumps(fig_ma, cls=plotly.utils.PlotlyJSONEncoder)
 
-    return graphJSON, rmse
+    return graphJSON, round(rmse, 2)
 
 
 def linear_regression_model(df, split=977):
@@ -141,6 +141,7 @@ def linear_regression_model(df, split=977):
     linear_model.fit(x_train, y_train)
 
     preds = linear_model.predict(x_valid)
+    rmse = np.sqrt(np.mean(np.power((np.array(y_valid) - np.array(preds)), 2)))
     valid['Predictions'] = 0
     valid['Predictions'] = preds
 
@@ -171,7 +172,7 @@ def linear_regression_model(df, split=977):
 
     graphJSON = json.dumps(fig_lm, cls=plotly.utils.PlotlyJSONEncoder)
 
-    return graphJSON
+    return graphJSON, round(rmse, 2)
 
 
 def knn_model(df, split=977, n_neighbors=2, weights="distance", p=2):
@@ -416,7 +417,7 @@ def index(ticker):
     # Generating plots
     historic_plot = historic_model(df)
     moving_average_plot, ma_rmse = moving_average_model(df)
-    linear_regression_plot = linear_regression_model(df)
+    linear_regression_plot, lr_rmse = linear_regression_model(df)
     knn_plot = knn_model(df)
     # lstm_plot = lstm_model(df)
     # auto_arima_plot = auto_arima_model(df)
@@ -438,7 +439,6 @@ def ma_customize_input(ticker, window, split):
     df = read_historic_data(ticker)
     moving_average_plot, rmse = moving_average_model(
         df, int(window), int(split))
-    rmse = round(rmse, 2)
 
     return render_template(
         "ma_customize.html.jinja",
@@ -462,12 +462,13 @@ def ma_customize_output():
 @app.route("/<ticker>/lr/customize/<split>")
 def lr_customize_input(ticker, split):
     df = read_historic_data(ticker)
-    linear_regression_plot = linear_regression_model(df, int(split))
+    linear_regression_plot, rmse = linear_regression_model(df, int(split))
 
     return render_template(
         "lr_customize.html.jinja",
         ticker=ticker,
         linear_regression_plot=linear_regression_plot,
+        rmse=rmse,
         split=split
     )
 

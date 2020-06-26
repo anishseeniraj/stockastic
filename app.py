@@ -24,8 +24,7 @@ def ticker():
 
 
 def read_historic_data(ticker):
-    # Unix timestamp calculation for today's date and five years ago
-
+    # Unix timestamp calculation for today's date and five years ago to obtain Yahoo Finance data
     date_today = datetime.today().strftime("%Y-%m-%d")
     dtc = date_today.split("-")
     date_five_years_ago = (
@@ -36,19 +35,10 @@ def read_historic_data(ticker):
     timestamp_five_years_ago = int((datetime(int(dfyc[0]), int(dfyc[1]), int(
         dfyc[2]), 0, 0)).replace(tzinfo=timezone.utc).timestamp())
 
-    print(timestamp_today)
-    print(timestamp_five_years_ago)
-
     # Reading in stock data from Yahoo Finance in the above timestamps' range
     csv_url = "https://query1.finance.yahoo.com/v7/finance/download/" + ticker + \
         "?period1=" + str(timestamp_five_years_ago) + "&period2=" + \
         str(timestamp_today) + "&interval=1d&events=history"
-
-    # Custom date solution
-    # print(int(datetime(2020, 6, 25, 0, 0).replace(tzinfo=timezone.utc).timestamp()))
-    # print(int((datetime(2020, 6, 25, 0, 0) - relativedelta(years=5)).replace(tzinfo=timezone.utc).timestamp()))
-    # Obtain the python date as a string, strip the string into parts, typecase to int, pass the int into the above print statements
-    # Refactor date stripper into a helper
     df = pd.read_csv(csv_url)
 
     return df
@@ -92,6 +82,7 @@ def moving_average_model(df, window=225, split=977):
 
     valid['Predictions'] = 0
     valid['Predictions'] = preds
+    rmse = np.sqrt(np.mean(np.power((np.array(valid['Close']) - preds), 2)))
 
     # Moving Average Plot
     fig_ma = go.Figure()
@@ -119,7 +110,7 @@ def moving_average_model(df, window=225, split=977):
 
     graphJSON = json.dumps(fig_ma, cls=plotly.utils.PlotlyJSONEncoder)
 
-    return graphJSON
+    return graphJSON, rmse
 
 
 def linear_regression_model(df, split=977):
@@ -424,7 +415,7 @@ def index(ticker):
 
     # Generating plots
     historic_plot = historic_model(df)
-    moving_average_plot = moving_average_model(df)
+    moving_average_plot, ma_rmse = moving_average_model(df)
     linear_regression_plot = linear_regression_model(df)
     knn_plot = knn_model(df)
     # lstm_plot = lstm_model(df)
@@ -445,12 +436,15 @@ def index(ticker):
 @app.route("/<ticker>/ma/customize/<window>/<split>")
 def ma_customize_input(ticker, window, split):
     df = read_historic_data(ticker)
-    moving_average_plot = moving_average_model(df, int(window), int(split))
+    moving_average_plot, rmse = moving_average_model(
+        df, int(window), int(split))
+    rmse = round(rmse, 2)
 
     return render_template(
         "ma_customize.html.jinja",
         ticker=ticker,
         moving_average_plot=moving_average_plot,
+        rmse=rmse,
         window=window,
         split=split
     )

@@ -285,6 +285,8 @@ def auto_arima_model(df, split=977, start_p=1, max_p=3, start_q=1, max_q=3, d=1,
         n_periods=1260 - split - 1)
     arima_forecast = pd.DataFrame(
         arima_forecast, index=valid.index, columns=['Prediction'])
+    rmse = np.sqrt(np.mean(
+        np.power((np.array(valid['Close']) - np.array(forecast['Prediction'])), 2)))
     fig_arima = go.Figure()
 
     fig_arima.add_trace(go.Scatter(
@@ -310,7 +312,7 @@ def auto_arima_model(df, split=977, start_p=1, max_p=3, start_q=1, max_q=3, d=1,
 
     graphJSON = json.dumps(fig_arima, cls=plotly.utils.PlotlyJSONEncoder)
 
-    return graphJSON
+    return graphJSON, round(rmse, 2)
 
 
 def lstm_model(df, split=977, units=50, epochs=1):
@@ -421,7 +423,7 @@ def index(ticker):
     linear_regression_plot, lr_rmse = linear_regression_model(df)
     knn_plot, knn_rmse = knn_model(df)
     # lstm_plot = lstm_model(df)
-    # auto_arima_plot = auto_arima_model(df)
+    # auto_arima_plot, arima_rmse = auto_arima_model(df)
 
     return render_template(
         "models.html.jinja",
@@ -539,13 +541,14 @@ def lstm_customize_output():
 @app.route("/<ticker>/arima/customize/<split>/<start_p>/<max_p>/<start_q>/<max_q>/<d>/<D>")
 def arima_customize_input(ticker, split, start_p, max_p, start_q, max_q, d, D):
     df = read_historic_data(ticker)
-    auto_arima_plot = auto_arima_model(df, int(split), int(
+    auto_arima_plot, rmse = auto_arima_model(df, int(split), int(
         start_p), int(max_p), int(start_q), int(max_q), int(d), int(D))
 
     return render_template(
         "arima_customize.html.jinja",
         ticker=ticker,
         auto_arima_plot=auto_arima_plot,
+        rmse=rmse,
         split=split,
         start_p=start_p,
         max_p=max_p,

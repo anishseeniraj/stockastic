@@ -423,7 +423,7 @@ def index(ticker):
     moving_average_plot, ma_rmse = moving_average_model(df)
     linear_regression_plot, lr_rmse = linear_regression_model(df)
     knn_plot, knn_rmse = knn_model(df)
-    # lstm_plot = lstm_model(df)
+    # lstm_plot, lstm_rmse = lstm_model(df)
     # auto_arima_plot, arima_rmse = auto_arima_model(df)
 
     return render_template(

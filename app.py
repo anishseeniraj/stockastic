@@ -379,6 +379,7 @@ def lstm_model(df, split=977, units=50, epochs=1):
     X_test = np.reshape(X_test, (X_test.shape[0], X_test.shape[1], 1))
     closing_price = model.predict(X_test)
     closing_price = scaler.inverse_transform(closing_price)
+    rmse = np.sqrt(np.mean(np.power((valid - closing_price), 2)))
 
     # plotting LSTM
     train = new_data[:split]
@@ -409,7 +410,7 @@ def lstm_model(df, split=977, units=50, epochs=1):
 
     graphJSON = json.dumps(fig_lstm, cls=plotly.utils.PlotlyJSONEncoder)
 
-    return graphJSON
+    return graphJSON, round(rmse, 2)
 
 
 @app.route("/<ticker>/models")
@@ -516,12 +517,13 @@ def knn_customize_output():
 @app.route("/<ticker>/lstm/customize/<split>/<units>/<epochs>")
 def lstm_customize_input(ticker, split, units, epochs):
     df = read_historic_data(ticker)
-    lstm_plot = lstm_model(df, int(split), int(units), int(epochs))
+    lstm_plot, rmse = lstm_model(df, int(split), int(units), int(epochs))
 
     return render_template(
         "lstm_customize.html.jinja",
         ticker=ticker,
         lstm_plot=lstm_plot,
+        rmse=rmse,
         split=split,
         units=units,
         epochs=epochs,

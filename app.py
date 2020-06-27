@@ -480,7 +480,8 @@ def ma_customize_output():
 @app.route("/<ticker>/lr/customize/<split>")
 def lr_customize_input(ticker, split):
     df = read_historic_data(ticker)
-    linear_regression_plot, rmse = linear_regression_model(df, int(split))
+    linear_model, linear_fig, linear_regression_plot, rmse = linear_regression_model(
+        df, int(split))
 
     return render_template(
         "lr_customize.html.jinja",
@@ -518,7 +519,7 @@ def lr_predict_output():
     # Form submission values
     year = request.form["year"]
     month = request.form["month"]
-    date = request.form["date"]
+    day = request.form["day"]
     ticker = request.form["ticker"]
     split = request.form["split"]
 
@@ -529,11 +530,37 @@ def lr_predict_output():
 
     # Generating the date column for predictions
     start_date = date.today()
-    end_date = date(year, month, day)
+    end_date = date(int(year), int(month), int(day))
+    # Range of prediction dates
     predict_data = {"Date": pd.date_range(start=start_date, end=end_date)}
+    # DataFrame with original prediction dates
+    predict_dates = pd.DataFrame(data=predict_data)
     to_predict_df = pd.DataFrame(data=predict_data)
+    to_predict_df["Date"] = to_predict_df["Date"].map(
+        datetime.toordinal)  # DataFrame with ordinal prediction dates
 
-    return redirect("/" + ticker + "/lr/customize/" + split)
+    # Predicting prices on new dates
+    new_predictions = linear_model.predict(to_predict_df)
+
+    print(new_predictions)
+
+    # Plotting predicted prices
+    linear_fig.add_trace(go.Scatter(
+        x=predict_dates["Date"],
+        y=new_predictions,
+        mode="lines",
+        name="Forecast"
+    ))
+
+    linear_regression_plot = json.dumps(
+        linear_fig, cls=plotly.utils.PlotlyJSONEncoder)
+
+    return render_template(
+        "lr_predict.html.jinja",
+        ticker=ticker,
+        split=split,
+        linear_regression_plot=linear_regression_plot
+    )
 
 
 @app.route("/<ticker>/knn/customize/<split>/<neighbors>/<weights>/<power>")

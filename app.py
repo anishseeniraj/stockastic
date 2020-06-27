@@ -6,6 +6,7 @@ import plotly.graph_objects as go
 import json
 from datetime import datetime
 from datetime import timezone
+from datetime import date
 from dateutil.relativedelta import relativedelta
 
 app = Flask(__name__, template_folder="templates")
@@ -184,7 +185,7 @@ def linear_regression_model(df, split=977):
 
     graphJSON = json.dumps(fig_lm, cls=plotly.utils.PlotlyJSONEncoder)
 
-    return graphJSON, round(rmse, 2)
+    return linear_model, fig_lm, graphJSON, round(rmse, 2)
 
 
 def knn_model(df, split=977, n_neighbors=2, weights="distance", p=2):
@@ -433,7 +434,8 @@ def index(ticker):
     # Generating plots
     historic_plot = historic_model(df)
     moving_average_plot, ma_rmse = moving_average_model(df)
-    linear_regression_plot, lr_rmse = linear_regression_model(df)
+    linear_model, linear_fig, linear_regression_plot, lr_rmse = linear_regression_model(
+        df)
     knn_plot, knn_rmse = knn_model(df)
     # lstm_plot, lstm_rmse = lstm_model(df)
     # auto_arima_plot, arima_rmse = auto_arima_model(df)
@@ -493,6 +495,43 @@ def lr_customize_input(ticker, split):
 def lr_customize_output():
     ticker = request.form["ticker"]
     split = request.form["split"]
+
+    return redirect("/" + ticker + "/lr/customize/" + split)
+
+
+@app.route("/<ticker>/lr/predict/<split>")
+def lr_predict_input(ticker, split):
+    df = read_historic_data(ticker)
+    linear_model, linear_fig, linear_regression_plot, rmse = linear_regression_model(
+        df, int(split))
+
+    return render_template(
+        "lr_predict.html.jinja",
+        ticker=ticker,
+        split=split,
+        linear_regression_plot=linear_regression_plot
+    )
+
+
+@app.route("/lr/predict", methods=["POST"])
+def lr_predict_output():
+    # Form submission values
+    year = request.form["year"]
+    month = request.form["month"]
+    date = request.form["date"]
+    ticker = request.form["ticker"]
+    split = request.form["split"]
+
+    # Generating the linear model
+    df = read_historic_data(ticker)
+    linear_model, linear_fig, linear_regression_plot, rmse = linear_regression_model(
+        df, int(split))
+
+    # Generating the date column for predictions
+    start_date = date.today()
+    end_date = date(year, month, day)
+    predict_data = {"Date": pd.date_range(start=start_date, end=end_date)}
+    to_predict_df = pd.DataFrame(data=predict_data)
 
     return redirect("/" + ticker + "/lr/customize/" + split)
 

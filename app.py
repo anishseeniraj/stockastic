@@ -125,8 +125,16 @@ def linear_regression_model(df, split=977):
         new_data['Date'][i] = data['Date'][i]
         new_data['Close'][i] = data['Close'][i]
 
+    print(new_data["Date"])
+
     new_data["Date"] = pd.to_datetime(new_data["Date"])
+
+    print(new_data["Date"])
+
     new_data["Date"] = new_data["Date"].map(datetime.toordinal)
+
+    print(new_data["Date"])
+
     train = new_data[:split]
     valid = new_data[split:]
     preds = []
@@ -141,6 +149,10 @@ def linear_regression_model(df, split=977):
     linear_model.fit(x_train, y_train)
 
     preds = linear_model.predict(x_valid)
+
+    print(x_valid.shape)
+    print(x_valid)
+
     rmse = np.sqrt(np.mean(np.power((np.array(y_valid) - np.array(preds)), 2)))
     valid['Predictions'] = 0
     valid['Predictions'] = preds

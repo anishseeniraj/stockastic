@@ -275,7 +275,7 @@ def knn_model(df, split=977, n_neighbors=2, weights="distance", p=2):
 
     graphJSON = json.dumps(fig_knn, cls=plotly.utils.PlotlyJSONEncoder)
 
-    return graphJSON, round(rmse, 2)
+    return knn_model, fig_knn, graphJSON, round(rmse, 2)
 
 
 def auto_arima_model(df, split=977, start_p=1, max_p=3, start_q=1, max_q=3, d=1, D=1):
@@ -436,7 +436,7 @@ def index(ticker):
     moving_average_plot, ma_rmse = moving_average_model(df)
     linear_model, linear_fig, linear_regression_plot, lr_rmse = linear_regression_model(
         df)
-    knn_plot, knn_rmse = knn_model(df)
+    k_model, knn_fig, knn_plot, knn_rmse = knn_model(df)
     # lstm_plot, lstm_rmse = lstm_model(df)
     # auto_arima_plot, arima_rmse = auto_arima_model(df)
 
@@ -566,7 +566,7 @@ def lr_predict_output():
 @app.route("/<ticker>/knn/customize/<split>/<neighbors>/<weights>/<power>")
 def knn_customize_input(ticker, split, neighbors, weights, power):
     df = read_historic_data(ticker)
-    knn_plot, rmse = knn_model(
+    k_model, knn_fig, knn_plot, rmse = knn_model(
         df, int(split), int(neighbors), weights, int(power))
 
     return render_template(
@@ -590,6 +590,78 @@ def knn_customize_output():
     power = request.form["power"]
 
     return redirect("/" + ticker + "/knn/customize/" + split + "/" + neighbors + "/" + weights + "/" + power)
+
+
+@app.route("/<ticker>/knn/predict/<split>/<neighbors>/<weights>/<power>")
+def knn_predict_input(ticker, split, neighbors, weights, power):
+    df = read_historic_data(ticker)
+    k_model, knn_fig, knn_plot, rmse = knn_model(
+        df, int(split), int(neighbors), weights, int(power))
+
+    return render_template(
+        "knn_predict.html.jinja",
+        ticker=ticker,
+        split=split,
+        neighbors=neighbors,
+        weights=weights,
+        power=power,
+        knn_plot=knn_plot
+    )
+
+
+@app.route("/knn/predict", methods=["POST"])
+def knn_predict_output():
+    # Form submission values
+    year = request.form["year"]
+    month = request.form["month"]
+    day = request.form["day"]
+    ticker = request.form["ticker"]
+    split = request.form["split"]
+    neighbors = request.form["neighbors"]
+    weights = request.form["weights"]
+    power = request.form["power"]
+
+    # Generating the linear model
+    df = read_historic_data(ticker)
+    k_model, knn_fig, knn_plot, rmse = knn_model(
+        df, int(split), int(neighbors), weights, int(power))
+
+    # Generating the date column for predictions
+    start_date = date.today()
+    end_date = date(int(year), int(month), int(day))
+    # Range of prediction dates
+    predict_data = {"Date": pd.date_range(start=start_date, end=end_date)}
+    # DataFrame with original prediction dates
+    predict_dates = pd.DataFrame(data=predict_data)
+    to_predict_df = pd.DataFrame(data=predict_data)
+    to_predict_df["Date"] = to_predict_df["Date"].map(
+        datetime.toordinal)  # DataFrame with ordinal prediction dates
+
+    # Predicting prices on new dates
+    new_predictions = k_model.predict(to_predict_df)
+
+    print(new_predictions)
+
+    # Plotting predicted prices
+    knn_fig.add_trace(go.Scatter(
+        x=predict_dates["Date"],
+        y=new_predictions,
+        mode="lines",
+        name="Forecast"
+    ))
+
+    knn_plot = json.dumps(
+        knn_fig, cls=plotly.utils.PlotlyJSONEncoder)
+
+    return render_template(
+        "knn_predict.html.jinja",
+        ticker=ticker,
+        split=split,
+        neighbors=neighbors,
+        weights=weights,
+        power=power,
+        knn_plot=knn_plot
+    )
 
 
 @app.route("/<ticker>/lstm/customize/<split>/<units>/<epochs>")

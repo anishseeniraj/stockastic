@@ -390,6 +390,9 @@ def lstm_model(df, split=977, units=50, epochs=1):
     X_test = np.array(X_test)
 
     X_test = np.reshape(X_test, (X_test.shape[0], X_test.shape[1], 1))
+
+    print(X_test)
+
     closing_price = model.predict(X_test)
     closing_price = scaler.inverse_transform(closing_price)
     rmse = np.sqrt(np.mean(np.power((valid - closing_price), 2)))
@@ -423,7 +426,7 @@ def lstm_model(df, split=977, units=50, epochs=1):
 
     graphJSON = json.dumps(fig_lstm, cls=plotly.utils.PlotlyJSONEncoder)
 
-    return graphJSON, round(rmse, 2)
+    return model, fig_lstm, graphJSON, round(rmse, 2)
 
 
 @app.route("/<ticker>/models")
@@ -437,7 +440,7 @@ def index(ticker):
     linear_model, linear_fig, linear_regression_plot, lr_rmse = linear_regression_model(
         df)
     k_model, knn_fig, knn_plot, knn_rmse = knn_model(df)
-    # lstm_plot, lstm_rmse = lstm_model(df)
+    lstm, lstm_fig, lstm_plot, lstm_rmse = lstm_model(df)
     # auto_arima_plot, arima_rmse = auto_arima_model(df)
 
     return render_template(
@@ -446,8 +449,8 @@ def index(ticker):
         historic_plot=historic_plot,
         moving_average_plot=moving_average_plot,
         linear_regression_plot=linear_regression_plot,
-        knn_plot=knn_plot
-        # lstm_plot=lstm_plot,
+        knn_plot=knn_plot,
+        lstm_plot=lstm_plot
         # auto_arima_plot=auto_arima_plot
     )
 
@@ -667,7 +670,8 @@ def knn_predict_output():
 @app.route("/<ticker>/lstm/customize/<split>/<units>/<epochs>")
 def lstm_customize_input(ticker, split, units, epochs):
     df = read_historic_data(ticker)
-    lstm_plot, rmse = lstm_model(df, int(split), int(units), int(epochs))
+    lstm, lstm_fig, lstm_plot, rmse = lstm_model(
+        df, int(split), int(units), int(epochs))
 
     return render_template(
         "lstm_customize.html.jinja",
@@ -688,6 +692,75 @@ def lstm_customize_output():
     epochs = request.form["epochs"]
 
     return redirect("/" + ticker + "/lstm/customize/" + split + "/" + units + "/" + epochs)
+
+
+@app.route("/<ticker>/lstm/predict/<split>/<units>/<epochs>/")
+def lstm_predict_input(ticker, split, units, epochs):
+    df = read_historic_data(ticker)
+    lstm, lstm_fig, lstm_plot, rmse = lstm_model(
+        df, int(split), int(units), int(epochs))
+
+    return render_template(
+        "lstm_predict.html.jinja",
+        ticker=ticker,
+        split=split,
+        units=units,
+        epochs=epochs,
+        lstm_plot=lstm_plot
+    )
+
+
+@app.route("/lstm/predict", methods=["POST"])
+def lstm_predict_output():
+    # Form submission values
+    year = request.form["year"]
+    month = request.form["month"]
+    day = request.form["day"]
+    split = request.form["split"]
+    ticker = request.form["ticker"]
+    units = request.form["units"]
+    epochs = request.form["epochs"]
+
+    # Generating the LSTM model
+    df = read_historic_data(ticker)
+    lstm, lstm_fig, lstm_plot, rmse = lstm_model(
+        df, int(split), int(units), int(epochs))
+
+    # Generating the date column for predictions
+    start_date = date.today()
+    end_date = date(int(year), int(month), int(day))
+    # Range of prediction dates
+    predict_data = {"Date": pd.date_range(start=start_date, end=end_date)}
+    # DataFrame with original prediction dates
+    predict_dates = pd.DataFrame(data=predict_data)
+    to_predict_df = pd.DataFrame(data=predict_data)
+    to_predict_df["Date"] = to_predict_df["Date"].map(
+        datetime.toordinal)  # DataFrame with ordinal prediction dates
+
+    # Predicting prices on new dates
+    new_predictions = lstm.predict(to_predict_df)
+
+    print(new_predictions)
+
+    # Plotting predicted prices
+    lstm_fig.add_trace(go.Scatter(
+        x=predict_dates["Date"],
+        y=new_predictions,
+        mode="lines",
+        name="Forecast"
+    ))
+
+    lstm_plot = json.dumps(
+        lstm_fig, cls=plotly.utils.PlotlyJSONEncoder)
+
+    return render_template(
+        "lstm_predict.html.jinja",
+        ticker=ticker,
+        split=split,
+        units=units,
+        epochs=epochs,
+        lstm_plot=lstm_plot
+    )
 
 
 @app.route("/<ticker>/arima/customize/<split>/<start_p>/<max_p>/<start_q>/<max_q>/<d>/<D>")

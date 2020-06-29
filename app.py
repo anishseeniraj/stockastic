@@ -188,7 +188,7 @@ def linear_regression_model(df, split=977):
     return linear_model, fig_lm, graphJSON, round(rmse, 2)
 
 
-def knn_model(df, split=977, n_neighbors=2, weights="distance", p=2):
+def knn_model(df, split=977, n_neighbors=2, weights="distance", p=2, new_predictions=False, ordinal_prediction_dates=None, original_prediction_dates=None):
     df['Date'] = pd.to_datetime(df.Date, format='%Y-%m-%d')
     df.index = df['Date']
 
@@ -208,6 +208,10 @@ def knn_model(df, split=977, n_neighbors=2, weights="distance", p=2):
     x_train = train.drop("Close", axis=1)
     y_train = train["Close"]
     x_valid = valid.drop("Close", axis=1)
+
+    if(new_predictions == True):
+        x_valid = x_valid.append(ordinal_prediction_dates, ignore_index=True)
+
     y_valid = valid["Close"]
 
     from sklearn import neighbors
@@ -221,6 +225,8 @@ def knn_model(df, split=977, n_neighbors=2, weights="distance", p=2):
     x_train = pd.DataFrame(x_train_scaled)
     x_valid_scaled = scaler.fit_transform(x_valid)
     x_valid = pd.DataFrame(x_valid_scaled)
+    print("x_valid before predict")
+    print(x_valid)
 
     # using gridsearch to find the best parameter for initial model generation
 
@@ -247,9 +253,13 @@ def knn_model(df, split=977, n_neighbors=2, weights="distance", p=2):
     #     minkowski metric (p) = 2
 
     preds = knn_model.predict(x_valid)
-    rmse = np.sqrt(np.mean(np.power((np.array(y_valid) - np.array(preds)), 2)))
-    valid["Predictions"] = 0
-    valid["Predictions"] = preds
+
+    print("Predictions and length")
+    print(len(preds))
+    print(preds)
+    # rmse = np.sqrt(np.mean(np.power((np.array(y_valid) - np.array(preds)), 2)))
+    # valid["Predictions"] = 0
+    # valid["Predictions"] = preds
     fig_knn = go.Figure()
 
     fig_knn.add_trace(go.Scatter(
@@ -266,16 +276,37 @@ def knn_model(df, split=977, n_neighbors=2, weights="distance", p=2):
         name="Validation"
     ))
 
-    fig_knn.add_trace(go.Scatter(
-        x=df["Date"][split:],
-        y=valid["Predictions"],
-        mode="lines",
-        name="Predictions"
-    ))
+    if(new_predictions == True):
+        all_prediction_dates = df["Date"][split:]
+
+        print("All prediction dates and length and length")
+        print(len(all_prediction_dates))
+        print(type(all_prediction_dates))
+        print(all_prediction_dates)
+        print("Type of original prediction dates")
+        print(type(original_prediction_dates["Date"]))
+        print(original_prediction_dates)
+
+        all_prediction_dates = all_prediction_dates.append(
+            original_prediction_dates["Date"], ignore_index=True)
+
+        fig_knn.add_trace(go.Scatter(
+            x=all_prediction_dates,
+            y=preds,
+            mode="lines",
+            name="Predictions"
+        ))
+    else:
+        fig_knn.add_trace(go.Scatter(
+            x=df["Date"][split:],
+            y=preds,
+            mode="lines",
+            name="Predictions"
+        ))
 
     graphJSON = json.dumps(fig_knn, cls=plotly.utils.PlotlyJSONEncoder)
 
-    return knn_model, fig_knn, graphJSON, round(rmse, 2)
+    return knn_model, fig_knn, graphJSON, round(777.77, 2)
 
 
 def auto_arima_model(df, split=977, start_p=1, max_p=3, start_q=1, max_q=3, d=1, D=1):
@@ -349,6 +380,8 @@ def lstm_model(df, split=977, units=50, epochs=1):
     # creating train and test sets
     dataset = new_data.values
 
+    print(dataset)
+
     train = dataset[0:split, :]
     valid = dataset[split:, :]
 
@@ -379,8 +412,16 @@ def lstm_model(df, split=977, units=50, epochs=1):
     model.fit(x_train, y_train, epochs=epochs, batch_size=1, verbose=2)
 
     inputs = new_data[len(new_data) - len(valid) - 60:].values
+
+    # print(inputs)
+
     inputs = inputs.reshape(-1, 1)
+
+    # print(inputs)
+
     inputs = scaler.transform(inputs)
+
+    # print(inputs)
 
     X_test = []
 
@@ -391,7 +432,7 @@ def lstm_model(df, split=977, units=50, epochs=1):
 
     X_test = np.reshape(X_test, (X_test.shape[0], X_test.shape[1], 1))
 
-    print(X_test)
+    # print(X_test)
 
     closing_price = model.predict(X_test)
     closing_price = scaler.inverse_transform(closing_price)
@@ -440,7 +481,7 @@ def index(ticker):
     linear_model, linear_fig, linear_regression_plot, lr_rmse = linear_regression_model(
         df)
     k_model, knn_fig, knn_plot, knn_rmse = knn_model(df)
-    lstm, lstm_fig, lstm_plot, lstm_rmse = lstm_model(df)
+    # lstm, lstm_fig, lstm_plot, lstm_rmse = lstm_model(df)
     # auto_arima_plot, arima_rmse = auto_arima_model(df)
 
     return render_template(
@@ -449,8 +490,8 @@ def index(ticker):
         historic_plot=historic_plot,
         moving_average_plot=moving_average_plot,
         linear_regression_plot=linear_regression_plot,
-        knn_plot=knn_plot,
-        lstm_plot=lstm_plot
+        knn_plot=knn_plot
+        # lstm_plot=lstm_plot
         # auto_arima_plot=auto_arima_plot
     )
 
@@ -626,8 +667,6 @@ def knn_predict_output():
 
     # Generating the linear model
     df = read_historic_data(ticker)
-    k_model, knn_fig, knn_plot, rmse = knn_model(
-        df, int(split), int(neighbors), weights, int(power))
 
     # Generating the date column for predictions
     start_date = date.today()
@@ -639,22 +678,25 @@ def knn_predict_output():
     to_predict_df = pd.DataFrame(data=predict_data)
     to_predict_df["Date"] = to_predict_df["Date"].map(
         datetime.toordinal)  # DataFrame with ordinal prediction dates
+    k_model, knn_fig, knn_plot, rmse = knn_model(
+        df, int(split), int(neighbors), weights, int(power), new_predictions=True, ordinal_prediction_dates=to_predict_df, original_prediction_dates=predict_dates)
 
     # Predicting prices on new dates
     new_predictions = k_model.predict(to_predict_df)
 
-    print(new_predictions)
+    # print("Predictions from returned model")
+    # print(new_predictions)
 
     # Plotting predicted prices
-    knn_fig.add_trace(go.Scatter(
-        x=predict_dates["Date"],
-        y=new_predictions,
-        mode="lines",
-        name="Forecast"
-    ))
+    # knn_fig.add_trace(go.Scatter(
+    #     x=predict_dates["Date"],
+    #     y=new_predictions,
+    #     mode="lines",
+    #     name="Forecast"
+    # ))
 
-    knn_plot = json.dumps(
-        knn_fig, cls=plotly.utils.PlotlyJSONEncoder)
+    # knn_plot = json.dumps(
+    #     knn_fig, cls=plotly.utils.PlotlyJSONEncoder)
 
     return render_template(
         "knn_predict.html.jinja",

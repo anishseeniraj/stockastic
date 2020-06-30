@@ -253,11 +253,16 @@ def knn_model(df, split=977, n_neighbors=2, weights="distance", p=2, new_predict
     #     minkowski metric (p) = 2
 
     preds = knn_model.predict(x_valid)
+    rmse = 0
+
+    if(new_predictions == False):
+        rmse = np.sqrt(
+            np.mean(np.power((np.array(y_valid) - np.array(preds)), 2)))
 
     print("Predictions and length")
     print(len(preds))
     print(preds)
-    # rmse = np.sqrt(np.mean(np.power((np.array(y_valid) - np.array(preds)), 2)))
+
     # valid["Predictions"] = 0
     # valid["Predictions"] = preds
     fig_knn = go.Figure()
@@ -278,15 +283,6 @@ def knn_model(df, split=977, n_neighbors=2, weights="distance", p=2, new_predict
 
     if(new_predictions == True):
         all_prediction_dates = df["Date"][split:]
-
-        print("All prediction dates and length and length")
-        print(len(all_prediction_dates))
-        print(type(all_prediction_dates))
-        print(all_prediction_dates)
-        print("Type of original prediction dates")
-        print(type(original_prediction_dates["Date"]))
-        print(original_prediction_dates)
-
         all_prediction_dates = all_prediction_dates.append(
             original_prediction_dates["Date"], ignore_index=True)
 
@@ -306,7 +302,7 @@ def knn_model(df, split=977, n_neighbors=2, weights="distance", p=2, new_predict
 
     graphJSON = json.dumps(fig_knn, cls=plotly.utils.PlotlyJSONEncoder)
 
-    return knn_model, fig_knn, graphJSON, round(777.77, 2)
+    return knn_model, fig_knn, graphJSON, round(rmse, 2)
 
 
 def auto_arima_model(df, split=977, start_p=1, max_p=3, start_q=1, max_q=3, d=1, D=1):
@@ -359,7 +355,7 @@ def auto_arima_model(df, split=977, start_p=1, max_p=3, start_q=1, max_q=3, d=1,
     return graphJSON, round(rmse, 2)
 
 
-def lstm_model(df, split=977, units=50, epochs=1):
+def lstm_model(df, split=977, units=50, epochs=1, new_predictions=False, original_predictions=None):
     from sklearn.preprocessing import MinMaxScaler
     from keras.models import Sequential
     from keras.layers import Dense, Dropout, LSTM
@@ -368,9 +364,16 @@ def lstm_model(df, split=977, units=50, epochs=1):
     data = df.sort_index(ascending=True, axis=0)
     new_data = pd.DataFrame(index=range(0, len(df)), columns=['Date', 'Close'])
 
+    print("new_data dataframe - ")
+    print(new_data)
+
     for i in range(0, len(data)):
         new_data['Date'][i] = data['Date'][i]
         new_data['Close'][i] = data['Close'][i]
+
+    # vertically stack new_data and predictions df
+    if(new_predictions == True):
+        new_data = new_data.append(original_predictions, ignore_index=True)
 
     # setting index
     new_data.index = new_data.Date
@@ -378,16 +381,26 @@ def lstm_model(df, split=977, units=50, epochs=1):
     new_data.drop('Date', axis=1, inplace=True)
 
     # creating train and test sets
-    dataset = new_data.values
+    dataset = new_data.values  # array of arrays containing one value [[value1]
+    # [value2]...]
 
+    print("new_data.values - ")
     print(dataset)
 
     train = dataset[0:split, :]
     valid = dataset[split:, :]
 
+    print("training set - ")
+    print(train)
+    print("validation set - ")
+    print(valid)
+
     # converting dataset into x_train and y_train
     scaler = MinMaxScaler(feature_range=(0, 1))
     scaled_data = scaler.fit_transform(dataset)
+
+    print("Scaled dataset - ")
+    print(scaled_data)
 
     x_train, y_train = [], []
 
@@ -395,8 +408,22 @@ def lstm_model(df, split=977, units=50, epochs=1):
         x_train.append(scaled_data[i-60:i, 0])
         y_train.append(scaled_data[i, 0])
 
+    print("Original x_train - ")
+    print(x_train)
+    print("Original y_train - ")
+    print(y_train)
+
     x_train, y_train = np.array(x_train), np.array(y_train)
+
+    print("x_train array - ")
+    print(x_train)
+    print("y_train array - ")
+    print(y_train)
+
     x_train = np.reshape(x_train, (x_train.shape[0], x_train.shape[1], 1))
+
+    print("reshaped x_train - ")
+    print(x_train)
 
     # create and fit the LSTM network
     model = Sequential()
@@ -411,32 +438,51 @@ def lstm_model(df, split=977, units=50, epochs=1):
     model.compile(loss='mean_squared_error', optimizer='adam')
     model.fit(x_train, y_train, epochs=epochs, batch_size=1, verbose=2)
 
+    # Starting from the last 60 training data points
     inputs = new_data[len(new_data) - len(valid) - 60:].values
 
-    # print(inputs)
+    print("Original inputs - ")
+    print(inputs)
 
     inputs = inputs.reshape(-1, 1)
 
-    # print(inputs)
+    print("reshaped inputs - ")
+    print(inputs)
 
     inputs = scaler.transform(inputs)
 
-    # print(inputs)
+    print("scaled inputs - ")
+    print(inputs)
 
     X_test = []
 
     for i in range(60, inputs.shape[0]):
         X_test.append(inputs[i-60:i, 0])
 
+    print("Original X_test - ")
+    print(X_test)
+
     X_test = np.array(X_test)
+
+    print("array X_test - ")
+    print(X_test)
 
     X_test = np.reshape(X_test, (X_test.shape[0], X_test.shape[1], 1))
 
-    # print(X_test)
+    print("reshaped X_test - ")
+    print(X_test)
 
     closing_price = model.predict(X_test)
+
+    print("original closing_price - ")
+    print(closing_price)
+
     closing_price = scaler.inverse_transform(closing_price)
-    rmse = np.sqrt(np.mean(np.power((valid - closing_price), 2)))
+
+    print("transformed closing_price - ")
+    print(closing_price)
+
+    # rmse = np.sqrt(np.mean(np.power((valid - closing_price), 2)))
 
     # plotting LSTM
     train = new_data[:split]
@@ -458,16 +504,28 @@ def lstm_model(df, split=977, units=50, epochs=1):
         name="Validation"
     ))
 
-    fig_lstm.add_trace(go.Scatter(
-        x=df["Date"][split:],
-        y=valid["Predictions"],
-        mode="lines",
-        name="Predictions"
-    ))
+    if(new_predictions == True):
+        all_prediction_dates = df["Date"][split:]
+        all_prediction_dates = all_prediction_dates.append(
+            original_predictions["Date"], ignore_index=True)
+
+        fig_lstm.add_trace(go.Scatter(
+            x=all_prediction_dates,
+            y=valid["Predictions"],
+            mode="lines",
+            name="Predictions"
+        ))
+    else:
+        fig_lstm.add_trace(go.Scatter(
+            x=df["Date"][split:],
+            y=valid["Predictions"],
+            mode="lines",
+            name="Predictions"
+        ))
 
     graphJSON = json.dumps(fig_lstm, cls=plotly.utils.PlotlyJSONEncoder)
 
-    return model, fig_lstm, graphJSON, round(rmse, 2)
+    return model, fig_lstm, graphJSON, round(777.77, 2)
 
 
 @app.route("/<ticker>/models")
@@ -481,7 +539,7 @@ def index(ticker):
     linear_model, linear_fig, linear_regression_plot, lr_rmse = linear_regression_model(
         df)
     k_model, knn_fig, knn_plot, knn_rmse = knn_model(df)
-    # lstm, lstm_fig, lstm_plot, lstm_rmse = lstm_model(df)
+    lstm, lstm_fig, lstm_plot, lstm_rmse = lstm_model(df)
     # auto_arima_plot, arima_rmse = auto_arima_model(df)
 
     return render_template(
@@ -490,8 +548,8 @@ def index(ticker):
         historic_plot=historic_plot,
         moving_average_plot=moving_average_plot,
         linear_regression_plot=linear_regression_plot,
-        knn_plot=knn_plot
-        # lstm_plot=lstm_plot
+        knn_plot=knn_plot,
+        lstm_plot=lstm_plot
         # auto_arima_plot=auto_arima_plot
     )
 
@@ -765,35 +823,18 @@ def lstm_predict_output():
 
     # Generating the LSTM model
     df = read_historic_data(ticker)
-    lstm, lstm_fig, lstm_plot, rmse = lstm_model(
-        df, int(split), int(units), int(epochs))
 
     # Generating the date column for predictions
     start_date = date.today()
     end_date = date(int(year), int(month), int(day))
     # Range of prediction dates
     predict_data = {"Date": pd.date_range(start=start_date, end=end_date)}
-    # DataFrame with original prediction dates
-    predict_dates = pd.DataFrame(data=predict_data)
-    to_predict_df = pd.DataFrame(data=predict_data)
-    to_predict_df["Date"] = to_predict_df["Date"].map(
-        datetime.toordinal)  # DataFrame with ordinal prediction dates
+    # df with original prediction dates and dummy close prices
+    to_predict = pd.DataFrame(data=predict_data)
+    to_predict["Close"] = 0
 
-    # Predicting prices on new dates
-    new_predictions = lstm.predict(to_predict_df)
-
-    print(new_predictions)
-
-    # Plotting predicted prices
-    lstm_fig.add_trace(go.Scatter(
-        x=predict_dates["Date"],
-        y=new_predictions,
-        mode="lines",
-        name="Forecast"
-    ))
-
-    lstm_plot = json.dumps(
-        lstm_fig, cls=plotly.utils.PlotlyJSONEncoder)
+    lstm, lstm_fig, lstm_plot, rmse = lstm_model(
+        df, int(split), int(units), int(epochs), new_predictions=True, original_predictions=to_predict)
 
     return render_template(
         "lstm_predict.html.jinja",

@@ -13,6 +13,8 @@
 <h3>TODOs</h3>
 
 <ul>
+  <li>Make the number of past values to use to make predictions customizable for the LSTM model (currently set to 60) *</li>
+  <li>Instead of dataframe.values, use to_numpy() (spotted first in the LSTM model, possibly available in other places) *</li>
   <li>Figure out custom date for fetching past 5 years stock data instead of hard coding the date into the URL</li>
   <li>Implement Feature Engineering for the Linear Regression model</li>
   <li>Allow the user to select which models to display in the models route</li>

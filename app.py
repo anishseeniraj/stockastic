@@ -359,13 +359,11 @@ def lstm_model(df, split=977, units=50, epochs=1, new_predictions=False, origina
     from sklearn.preprocessing import MinMaxScaler
     from keras.models import Sequential
     from keras.layers import Dense, Dropout, LSTM
+    from keras.preprocessing.sequence import TimeseriesGenerator
 
     # creating dataframe
     data = df.sort_index(ascending=True, axis=0)
     new_data = pd.DataFrame(index=range(0, len(df)), columns=['Date', 'Close'])
-
-    print("new_data dataframe - ")
-    print(new_data)
 
     for i in range(0, len(data)):
         new_data['Date'][i] = data['Date'][i]
@@ -384,151 +382,72 @@ def lstm_model(df, split=977, units=50, epochs=1, new_predictions=False, origina
     dataset = new_data.values  # array of arrays containing one value [[value1]
     # [value2]...]
 
-    print("new_data.values - ")
-    print(dataset)
+    train = []
+    test = []
 
-    train = dataset[0:split, :]
-    valid = dataset[split:, :]
-
-    print("training set - ")
-    print(train)
-    print("validation set - ")
-    print(valid)
+    # For forecasting, train the entire dataset
+    if(new_predictions == True):
+        train = new_data[:len(df)]
+        test = new_data[len(df):]
+    else:
+        train = new_data[:split]
+        test = new_data[split:]
 
     # converting dataset into x_train and y_train
-    scaler = MinMaxScaler(feature_range=(0, 1))
-    scaled_data = scaler.fit_transform(dataset)
+    scaler = MinMaxScaler()
+    scaler.fit(train)
+    train = scaler.transform(train)
+    test = scaler.transform(test)
 
-    print("Scaled dataset - ")
-    print(scaled_data)
+    n_inputs = df.shape[0] - split
+    n_features = 1
 
-    x_train, y_train = [], []
-
-    for i in range(60, len(train)):
-        x_train.append(scaled_data[i-60:i, 0])
-        y_train.append(scaled_data[i, 0])
-
-    print("Original x_train - ")
-    print(x_train)
-    print("Original y_train - ")
-    print(y_train)
-
-    x_train, y_train = np.array(x_train), np.array(y_train)
-
-    print("x_train array - ")
-    print(x_train)
-    print("y_train array - ")
-    print(y_train)
-
-    x_train = np.reshape(x_train, (x_train.shape[0], x_train.shape[1], 1))
-
-    print("reshaped x_train - ")
-    print(x_train)
-
-    # create and fit the LSTM network
+    generator = TimeseriesGenerator(
+        train, train, length=n_inputs, batch_size=1)
     model = Sequential()
-    model.add(LSTM(
-        units=units,
-        return_sequences=True,
-        input_shape=(x_train.shape[1], 1))
-    )
-    model.add(LSTM(units=units))
-    model.add(Dense(1))  # dimensionality of the output
 
-    model.compile(loss='mean_squared_error', optimizer='adam')
-    model.fit(x_train, y_train, epochs=epochs, batch_size=1, verbose=2)
+    model.add(LSTM(units=units, activation="relu",
+                   input_shape=(n_inputs, n_features)))
+    model.add(Dropout(0.15))
+    model.add(Dense(1))
+    model.compile(optimizer="adam", loss="mean_squared_error")
+    model.fit_generator(generator, epochs=12)
 
-    # Starting from the last 60 training data points
-    inputs = new_data[len(new_data) - len(valid) - 60:].values
+    predictions = []
+    batch = train[-n_inputs:].reshape((1, n_inputs, n_features))
 
-    print("Original inputs - ")
-    print(inputs)
+    for i in range(n_inputs):
+        predictions.append(model.predict(batch)[0])
+        batch = np.append(batch[:, 1:, :], [[predictions[i]]], axis=1)
 
-    inputs = inputs.reshape(-1, 1)
+    new_data_predict = pd.DataFrame(scaler.inverse_transform(
+        predictions), index=new_data[-n_inputs:].index, columns=["Predictions"])
+    new_data_test = pd.concat([new_data, new_data_predict], axis=1)
 
-    print("reshaped inputs - ")
-    print(inputs)
-
-    inputs = scaler.transform(inputs)
-
-    print("scaled inputs - ")
-    print(inputs)
-
-    X_test = []
-
-    for i in range(60, inputs.shape[0]):
-        X_test.append(inputs[i-60:i, 0])
-
-    print("Original X_test - ")
-    print(X_test)
-
-    X_test = np.array(X_test)
-
-    print("array X_test - ")
-    print(X_test)
-
-    X_test = np.reshape(X_test, (X_test.shape[0], X_test.shape[1], 1))
-
-    print("reshaped X_test - ")
-    print(X_test)
-
-    closing_price = model.predict(X_test)
-
-    print("original closing_price - ")
-    print(closing_price)
-
-    closing_price = scaler.inverse_transform(closing_price)
-
-    print("transformed closing_price - ")
-    print(closing_price)
-
-    # rmse = np.sqrt(np.mean(np.power((valid - closing_price), 2)))
-
-    # plotting LSTM
-    train = new_data[:split]
-    valid = new_data[split:]
-    valid['Predictions'] = closing_price
     fig_lstm = go.Figure()
 
     fig_lstm.add_trace(go.Scatter(
-        x=df["Date"],
-        y=train["Close"],
+        x=new_data_test.index,
+        y=new_data_test["Close"],
         mode="lines",
         name="Training"
     ))
 
+    print(new_data_test)
+
     fig_lstm.add_trace(go.Scatter(
-        x=df["Date"][split:],
-        y=valid["Close"],
+        x=new_data_test.index,
+        y=new_data_test["Predictions"],
         mode="lines",
         name="Validation"
     ))
-
-    if(new_predictions == True):
-        all_prediction_dates = df["Date"][split:]
-        all_prediction_dates = all_prediction_dates.append(
-            original_predictions["Date"], ignore_index=True)
-
-        fig_lstm.add_trace(go.Scatter(
-            x=all_prediction_dates,
-            y=valid["Predictions"],
-            mode="lines",
-            name="Predictions"
-        ))
-    else:
-        fig_lstm.add_trace(go.Scatter(
-            x=df["Date"][split:],
-            y=valid["Predictions"],
-            mode="lines",
-            name="Predictions"
-        ))
 
     graphJSON = json.dumps(fig_lstm, cls=plotly.utils.PlotlyJSONEncoder)
 
     return model, fig_lstm, graphJSON, round(777.77, 2)
 
 
-@app.route("/<ticker>/models")
+@ app.route("/<ticker>/models")
 def index(ticker):
     # Reading stock data
     df = read_historic_data(ticker)
@@ -831,7 +750,7 @@ def lstm_predict_output():
     predict_data = {"Date": pd.date_range(start=start_date, end=end_date)}
     # df with original prediction dates and dummy close prices
     to_predict = pd.DataFrame(data=predict_data)
-    to_predict["Close"] = 0
+    # to_predict["Close"] = 0
 
     lstm, lstm_fig, lstm_plot, rmse = lstm_model(
         df, int(split), int(units), int(epochs), new_predictions=True, original_predictions=to_predict)

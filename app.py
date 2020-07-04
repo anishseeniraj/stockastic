@@ -364,9 +364,6 @@ def lstm_model(df, split=977, units=50, epochs=1, new_predictions=False, origina
     data = df.sort_index(ascending=True, axis=0)
     new_data = pd.DataFrame(index=range(0, len(df)), columns=['Date', 'Close'])
 
-    print("new_data dataframe - ")
-    print(new_data)
-
     for i in range(0, len(data)):
         new_data['Date'][i] = data['Date'][i]
         new_data['Close'][i] = data['Close'][i]
@@ -380,27 +377,26 @@ def lstm_model(df, split=977, units=50, epochs=1, new_predictions=False, origina
 
     new_data.drop('Date', axis=1, inplace=True)
 
+    print("new_data - ")
+    print(new_data)
+
     # creating train and test sets
     dataset = new_data.values  # array of arrays containing one value [[value1]
     # [value2]...]
 
-    print("new_data.values - ")
-    print(dataset)
+    train = []
+    valid = []
 
-    train = dataset[0:split, :]
-    valid = dataset[split:, :]
-
-    print("training set - ")
-    print(train)
-    print("validation set - ")
-    print(valid)
+    if(new_predictions):
+        train = dataset[:len(df), :]
+        valid = dataset[len(df):, :]
+    else:
+        train = dataset[0:split, :]
+        valid = dataset[split:, :]
 
     # converting dataset into x_train and y_train
     scaler = MinMaxScaler(feature_range=(0, 1))
     scaled_data = scaler.fit_transform(dataset)
-
-    print("Scaled dataset - ")
-    print(scaled_data)
 
     x_train, y_train = [], []
 
@@ -408,22 +404,8 @@ def lstm_model(df, split=977, units=50, epochs=1, new_predictions=False, origina
         x_train.append(scaled_data[i-60:i, 0])
         y_train.append(scaled_data[i, 0])
 
-    print("Original x_train - ")
-    print(x_train)
-    print("Original y_train - ")
-    print(y_train)
-
     x_train, y_train = np.array(x_train), np.array(y_train)
-
-    print("x_train array - ")
-    print(x_train)
-    print("y_train array - ")
-    print(y_train)
-
     x_train = np.reshape(x_train, (x_train.shape[0], x_train.shape[1], 1))
-
-    print("reshaped x_train - ")
-    print(x_train)
 
     # create and fit the LSTM network
     model = Sequential()
@@ -434,59 +416,47 @@ def lstm_model(df, split=977, units=50, epochs=1, new_predictions=False, origina
     )
     model.add(LSTM(units=units))
     model.add(Dense(1))  # dimensionality of the output
-
     model.compile(loss='mean_squared_error', optimizer='adam')
     model.fit(x_train, y_train, epochs=epochs, batch_size=1, verbose=2)
 
     # Starting from the last 60 training data points
     inputs = new_data[len(new_data) - len(valid) - 60:].values
-
-    print("Original inputs - ")
-    print(inputs)
-
     inputs = inputs.reshape(-1, 1)
 
-    print("reshaped inputs - ")
-    print(inputs)
+    print(inputs)  # 2D array
 
     inputs = scaler.transform(inputs)
 
-    print("scaled inputs - ")
-    print(inputs)
-
     X_test = []
+
+    print(inputs[0:60, 0])  # 1D array
 
     for i in range(60, inputs.shape[0]):
         X_test.append(inputs[i-60:i, 0])
 
-    print("Original X_test - ")
-    print(X_test)
-
     X_test = np.array(X_test)
 
-    print("array X_test - ")
-    print(X_test)
+    print(X_test) # 2D array
 
     X_test = np.reshape(X_test, (X_test.shape[0], X_test.shape[1], 1))
 
-    print("reshaped X_test - ")
-    print(X_test)
+    print(X_test) # 3D array
 
     closing_price = model.predict(X_test)
 
-    print("original closing_price - ")
-    print(closing_price)
+    print(closing_price) # 2D array
 
     closing_price = scaler.inverse_transform(closing_price)
-
-    print("transformed closing_price - ")
-    print(closing_price)
-
     # rmse = np.sqrt(np.mean(np.power((valid - closing_price), 2)))
 
     # plotting LSTM
-    train = new_data[:split]
-    valid = new_data[split:]
+    if(new_predictions):
+        train = new_data[:len(df)]
+        valid = new_data[len(df):]
+    else:
+        train = new_data[:split]
+        valid = new_data[split:]
+
     valid['Predictions'] = closing_price
     fig_lstm = go.Figure()
 
@@ -497,25 +467,22 @@ def lstm_model(df, split=977, units=50, epochs=1, new_predictions=False, origina
         name="Training"
     ))
 
-    fig_lstm.add_trace(go.Scatter(
-        x=df["Date"][split:],
-        y=valid["Close"],
-        mode="lines",
-        name="Validation"
-    ))
-
-    if(new_predictions == True):
-        all_prediction_dates = df["Date"][split:]
-        all_prediction_dates = all_prediction_dates.append(
-            original_predictions["Date"], ignore_index=True)
-
+    if(new_predictions):
         fig_lstm.add_trace(go.Scatter(
-            x=all_prediction_dates,
+            x=new_data.index[len(df) - 60:],
             y=valid["Predictions"],
             mode="lines",
-            name="Predictions"
+            name="Forecast"
         ))
     else:
+        fig_lstm.add_trace(go.Scatter(
+            x=df["Date"][split:],
+            y=valid["Close"],
+            mode="lines",
+            name="Validation"
+        ))
+
+    if(new_predictions == False):
         fig_lstm.add_trace(go.Scatter(
             x=df["Date"][split:],
             y=valid["Predictions"],
@@ -828,10 +795,14 @@ def lstm_predict_output():
     start_date = date.today()
     end_date = date(int(year), int(month), int(day))
     # Range of prediction dates
-    predict_data = {"Date": pd.date_range(start=start_date, end=end_date)}
+    predict_data = {"Date": pd.date_range(
+        start=start_date, end=end_date)}
     # df with original prediction dates and dummy close prices
     to_predict = pd.DataFrame(data=predict_data)
-    to_predict["Close"] = 0
+    to_predict["Close"] = np.nan
+
+    print("to_predict - ")
+    print(to_predict)
 
     lstm, lstm_fig, lstm_plot, rmse = lstm_model(
         df, int(split), int(units), int(epochs), new_predictions=True, original_predictions=to_predict)

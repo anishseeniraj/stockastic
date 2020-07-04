@@ -421,32 +421,44 @@ def lstm_model(df, split=977, units=50, epochs=1, new_predictions=False, origina
 
     # Starting from the last 60 training data points
     inputs = new_data[len(new_data) - len(valid) - 60:].values
-    inputs = inputs.reshape(-1, 1)
-
-    print(inputs)  # 2D array
-
+    inputs = inputs.reshape(-1, 1)  # 2D array
     inputs = scaler.transform(inputs)
-
+    actual_inputs = inputs[0:60]  # 2D array
+    closing_price = []
     X_test = []
 
-    print(inputs[0:60, 0])  # 1D array
+    # print(inputs[0:60, 0])  # 1D array
+
+    print("initial actual_inputs")
+    print(actual_inputs)
 
     for i in range(60, inputs.shape[0]):
-        X_test.append(inputs[i-60:i, 0])
+        X_test = []
 
-    X_test = np.array(X_test)
+        X_test.append(actual_inputs[i-60:i, 0])
 
-    print(X_test) # 2D array
+        print("actual_inputs slice -")
+        print(actual_inputs[i-60:i, 0])
 
-    X_test = np.reshape(X_test, (X_test.shape[0], X_test.shape[1], 1))
+        X_test = np.array(X_test)  # 2D array
+        X_test = np.reshape(
+            X_test, (X_test.shape[0], X_test.shape[1], 1))  # 3D array
+        predicted_price = model.predict(X_test[0:1])  # 2D array
+        actual_inputs = np.vstack([actual_inputs, predicted_price[0]])
+        predicted_price = scaler.inverse_transform(predicted_price)
 
-    print(X_test) # 3D array
+        print("current prediction -")
+        print(predicted_price[0])
+        print(predicted_price[0, 0])
 
-    closing_price = model.predict(X_test)
+        closing_price.append(predicted_price[0, 0])
 
-    print(closing_price) # 2D array
+        print("actual_inputs -")
+        print(len(actual_inputs))
+        print(actual_inputs)
 
-    closing_price = scaler.inverse_transform(closing_price)
+    print("closing price predictions -")
+    print(closing_price)
     # rmse = np.sqrt(np.mean(np.power((valid - closing_price), 2)))
 
     # plotting LSTM

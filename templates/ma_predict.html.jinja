@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Moving Average Forecast</title>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.6/d3.min.js"></script>
+  </head>
+  <body>
+    <h1>{{ticker}} Stock Price Prediction - Moving Average</h1>
+
+    <p>Enter a future date that you want the prediction on</p>
+
+    <form action="/ma/predict" method="POST">
+      <label>
+        Enter the year -
+      </label>
+      <input type="number" name="year" placeholder="2020" />
+      <label>
+        Enter the month -
+      </label>
+      <input type="number" name="month" placeholder="12" />
+      <label>
+        Enter the date -
+      </label>
+      <input type="number" name="day" placeholder="31" />
+      <input type="hidden" name="ticker" value="{{ticker}}" />
+      <input type="hidden" name="window" value="{{window}}" />
+      <input type="hidden" name="split" value="{{split}}" />
+      <input type="submit" />
+    </form>
+
+    <div class="chart" id="plot_ma">
+      <script>
+        var graphs = {{ma_plot | safe}};
+
+        Plotly.plot("plot_ma", graphs, {});
+      </script>
+    </div>
+  </body>
+</html>

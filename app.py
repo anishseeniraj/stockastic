@@ -58,7 +58,7 @@ def historic_model(df):
     return graphJSON
 
 
-def moving_average_model(df, window=225, split=977):
+def moving_average_model(df, window=225, split=977, new_predictions=False, new_dates=None):
     # Moving Average
     df['Date'] = pd.to_datetime(df.Date, format='%Y-%m-%d')
     df.index = df['Date']
@@ -71,47 +71,67 @@ def moving_average_model(df, window=225, split=977):
         new_data['Date'][i] = data['Date'][i]
         new_data['Close'][i] = data['Close'][i]
 
+    new_data = new_data.append(new_dates, ignore_index=True)
+
     # splitting into train and validation
-    train = new_data[:split]
-    valid = new_data[split:]
+    train = []
+    valid = []
+
+    if(new_predictions):
+        train = new_data[:len(df)]
+        valid = new_data[len(df):]
+    else:
+        train = new_data[:split]
+        valid = new_data[split:]
+
     preds = []
 
     for i in range(0, valid.shape[0]):
         a = train['Close'][len(train)-window+i:].sum() + sum(preds)
         b = a/window
+
         preds.append(b)
 
     valid['Predictions'] = 0
     valid['Predictions'] = preds
-    rmse = np.sqrt(np.mean(np.power((np.array(valid['Close']) - preds), 2)))
+    # rmse = np.sqrt(np.mean(np.power((np.array(valid['Close']) - preds), 2)))
 
     # Moving Average Plot
     fig_ma = go.Figure()
 
     fig_ma.add_trace(go.Scatter(
-        x=df["Date"],
+        x=train["Date"],
         y=train["Close"],
         mode="lines",
         name="Training"
     ))
 
-    fig_ma.add_trace(go.Scatter(
-        x=df["Date"][split:],
-        y=valid["Close"],
-        mode="lines",
-        name="Validation"
-    ))
+    if(new_predictions):
+        fig_ma.add_trace(go.Scatter(
+            x=valid["Date"],
+            y=valid["Predictions"],
+            mode="lines",
+            name="Forecast"
+        ))
+    else:
+        fig_ma.add_trace(go.Scatter(
+            x=df["Date"][split:],
+            y=valid["Close"],
+            mode="lines",
+            name="Validation"
+        ))
 
-    fig_ma.add_trace(go.Scatter(
-        x=df["Date"][split:],
-        y=valid["Predictions"],
-        mode="lines",
-        name="Predictions"
-    ))
+    if(new_predictions == False):
+        fig_ma.add_trace(go.Scatter(
+            x=df["Date"][split:],
+            y=valid["Predictions"],
+            mode="lines",
+            name="Predictions"
+        ))
 
     graphJSON = json.dumps(fig_ma, cls=plotly.utils.PlotlyJSONEncoder)
 
-    return graphJSON, round(rmse, 2)
+    return graphJSON, round(777.77, 2)
 
 
 def linear_regression_model(df, split=977):
@@ -518,7 +538,7 @@ def index(ticker):
     linear_model, linear_fig, linear_regression_plot, lr_rmse = linear_regression_model(
         df)
     k_model, knn_fig, knn_plot, knn_rmse = knn_model(df)
-    lstm, lstm_fig, lstm_plot, lstm_rmse = lstm_model(df)
+    # lstm, lstm_fig, lstm_plot, lstm_rmse = lstm_model(df)
     # auto_arima_plot, arima_rmse = auto_arima_model(df)
 
     return render_template(
@@ -527,8 +547,8 @@ def index(ticker):
         historic_plot=historic_plot,
         moving_average_plot=moving_average_plot,
         linear_regression_plot=linear_regression_plot,
-        knn_plot=knn_plot,
-        lstm_plot=lstm_plot
+        knn_plot=knn_plot
+        # lstm_plot=lstm_plot
         # auto_arima_plot=auto_arima_plot
     )
 
@@ -556,6 +576,58 @@ def ma_customize_output():
     split = request.form["split"]
 
     return redirect("/" + ticker + "/ma/customize/" + window + "/" + split)
+
+
+@app.route("/<ticker>/ma/predict/<window>/<split>")
+def ma_predict_input(ticker, window, split):
+    df = read_historic_data(ticker)
+    ma_plot, ma_rmse = moving_average_model(
+        df, int(window), int(split))
+
+    return render_template(
+        "ma_predict.html.jinja",
+        ticker=ticker,
+        window=window,
+        split=split,
+        ma_plot=ma_plot
+    )
+
+
+@app.route("/ma/predict", methods=["POST"])
+def ma_predict_output():
+    # Form submission values
+    year = request.form["year"]
+    month = request.form["month"]
+    day = request.form["day"]
+    ticker = request.form["ticker"]
+    window = request.form["window"]
+    split = request.form["split"]
+
+    # Generating the linear model
+    df = read_historic_data(ticker)
+
+    # Generating the date column for predictions
+    start_date = date.today()
+    end_date = date(int(year), int(month), int(day))
+    # Range of prediction dates
+    predict_data = {"Date": pd.date_range(
+        start=start_date, end=end_date)}
+    # df with original prediction dates and dummy close prices
+    to_predict = pd.DataFrame(data=predict_data)
+    to_predict["Close"] = np.nan
+
+    # Generating the model
+    ma_plot, ma_rmse = moving_average_model(
+        df, int(window), int(split), new_predictions=True, new_dates=to_predict)
+
+    return render_template(
+        "ma_predict.html.jinja",
+        ticker=ticker,
+        window=window,
+        split=split,
+        ma_rmse=ma_rmse,
+        ma_plot=ma_plot
+    )
 
 
 @app.route("/<ticker>/lr/customize/<split>")
@@ -812,9 +884,6 @@ def lstm_predict_output():
     # df with original prediction dates and dummy close prices
     to_predict = pd.DataFrame(data=predict_data)
     to_predict["Close"] = np.nan
-
-    print("to_predict - ")
-    print(to_predict)
 
     lstm, lstm_fig, lstm_plot, rmse = lstm_model(
         df, int(split), int(units), int(epochs), new_predictions=True, original_predictions=to_predict)

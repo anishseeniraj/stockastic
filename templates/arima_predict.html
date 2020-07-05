@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Auto-ARIMA Predictions</title>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.6/d3.min.js"></script>
+  </head>
+  <body>
+    <h1>{{ticker}} Stock Price Prediction - Auto-ARIMA</h1>
+
+    <p>Enter a future date that you want the prediction on</p>
+
+    <form action="/arima/predict" method="POST">
+      <label>
+        Enter the year -
+      </label>
+      <input type="number" name="year" placeholder="2020" />
+      <label>
+        Enter the month -
+      </label>
+      <input type="number" name="month" placeholder="12" />
+      <label>
+        Enter the date -
+      </label>
+      <input type="number" name="day" placeholder="31" />
+      <input type="hidden" name="ticker" value="{{ticker}}" />
+      <input type="hidden" name="split" value="{{split}}" />
+      <input type="hidden" name="start_p" value="{{start_p}}" />
+      <input type="hidden" name="max_p" value="{{max_p}}" />
+      <input type="hidden" name="start_q" value="{{start_q}}" />
+      <input type="hidden" name="max_q" value="{{max_q}}" />
+      <input type="hidden" name="d" value="{{d}}" />
+      <input type="hidden" name="D" value="{{D}}" />
+      <input type="submit" />
+    </form>
+
+    <div class="chart" id="plot_arima">
+      <script>
+        var graphs = {{arima_plot | safe}};
+
+        Plotly.plot("plot_arima", graphs, {});
+      </script>
+    </div>
+  </body>
+</html>

@@ -325,13 +325,25 @@ def knn_model(df, split=977, n_neighbors=2, weights="distance", p=2, new_predict
     return knn_model, fig_knn, graphJSON, round(rmse, 2)
 
 
-def auto_arima_model(df, split=977, start_p=1, max_p=3, start_q=1, max_q=3, d=1, D=1):
+def auto_arima_model(df, split=977, start_p=1, max_p=3, start_q=1, max_q=3, d=1, D=1, new_predictions=False, new_dates=None):
     import pmdarima as pm
 
-    data = df.sort_index(ascending=True, axis=0)
+    df = df.sort_index(ascending=True, axis=0)
+    new_data = df[["Date", "Close"]]
 
-    train = data[:split]
-    valid = data[split:]
+    if(new_predictions):
+        new_data = new_data.append(new_dates, ignore_index=True)
+
+    # Training-validation splits
+    train = []
+    valid = []
+
+    if(new_predictions):
+        train = new_data[:len(df)]
+        valid = new_data[len(df):]
+    else:
+        train = new_data[:split]
+        valid = new_data[split:]
 
     training = train['Close']
     validation = valid['Close']
@@ -341,34 +353,44 @@ def auto_arima_model(df, split=977, start_p=1, max_p=3, start_q=1, max_q=3, d=1,
 
     arima_model.fit(training)
 
-    arima_forecast = arima_model.predict(
-        n_periods=1260 - split - 1)
+    arima_forecast = arima_model.predict(n_periods=len(valid))
+    # arima_forecast = arima_model.predict(
+    #    n_periods = 1259 - split)
     arima_forecast = pd.DataFrame(
         arima_forecast, index=valid.index, columns=['Prediction'])
-    rmse = np.sqrt(np.mean(
-        np.power((np.array(valid['Close']) - np.array(forecast['Prediction'])), 2)))
+    # rmse = np.sqrt(np.mean(
+    #    np.power((np.array(valid['Close']) - np.array(forecast['Prediction'])), 2)))
     fig_arima = go.Figure()
 
     fig_arima.add_trace(go.Scatter(
-        x=df["Date"],
+        x=train["Date"],
         y=train["Close"],
         mode="lines",
         name="Training"
     ))
 
-    fig_arima.add_trace(go.Scatter(
-        x=df["Date"][split:],
-        y=valid["Close"],
-        mode="lines",
-        name="Validation"
-    ))
+    if(new_predictions):
+        fig_arima.add_trace(go.Scatter(
+            x=valid["Date"],
+            y=arima_forecast["Prediction"],
+            mode="lines",
+            name="Predictions"
+        ))
+    else:
+        fig_arima.add_trace(go.Scatter(
+            x=df["Date"][split:],
+            y=valid["Close"],
+            mode="lines",
+            name="Validation"
+        ))
 
-    fig_arima.add_trace(go.Scatter(
-        x=df["Date"][split:],
-        y=arima_forecast["Prediction"],
-        mode="lines",
-        name="Predictions"
-    ))
+    if(new_predictions == False):
+        fig_arima.add_trace(go.Scatter(
+            x=df["Date"][split:],
+            y=arima_forecast["Prediction"],
+            mode="lines",
+            name="Predictions"
+        ))
 
     graphJSON = json.dumps(fig_arima, cls=plotly.utils.PlotlyJSONEncoder)
 
@@ -382,7 +404,8 @@ def lstm_model(df, split=977, units=50, epochs=1, new_predictions=False, origina
 
     # creating dataframe
     data = df.sort_index(ascending=True, axis=0)
-    new_data = pd.DataFrame(index=range(0, len(df)), columns=['Date', 'Close'])
+    new_data = pd.DataFrame(index=range(0, len(df)),
+                            columns=['Date', 'Close'])
 
     for i in range(0, len(data)):
         new_data['Date'][i] = data['Date'][i]
@@ -527,7 +550,7 @@ def lstm_model(df, split=977, units=50, epochs=1, new_predictions=False, origina
     return model, fig_lstm, graphJSON, round(777.77, 2)
 
 
-@app.route("/<ticker>/models")
+@ app.route("/<ticker>/models")
 def index(ticker):
     # Reading stock data
     df = read_historic_data(ticker)
@@ -931,6 +954,71 @@ def arima_customize_output():
     D = request.form["D"]
 
     return redirect("/" + ticker + "/arima/customize/" + split + "/" + start_p + "/" + max_p + "/" + start_q + "/" + max_q + "/" + d + "/" + D)
+
+
+@app.route("/<ticker>/arima/predict/<split>/<start_p>/<max_p>/<start_q>/<max_q>/<d>/<D>")
+def arima_predict_input(ticker, split, start_p, max_p, start_q, max_q, d, D):
+    df = read_historic_data(ticker)
+    arima_plot, rmse = auto_arima_model(
+        df, int(split), int(start_p), int(max_p), int(start_q), int(max_q), int(d), int(D))
+
+    return render_template(
+        "arima_predict.html.jinja",
+        ticker=ticker,
+        split=split,
+        start_p=start_p,
+        max_p=max_p,
+        start_q=start_q,
+        max_q=max_q,
+        d=d,
+        D=D,
+        arima_plot=arima_plot
+    )
+
+
+@app.route("/arima/predict", methods=["POST"])
+def arima_predict_output():
+    # Form submission values
+    year = request.form["year"]
+    month = request.form["month"]
+    day = request.form["day"]
+    split = request.form["split"]
+    ticker = request.form["ticker"]
+    start_p = request.form["start_p"]
+    max_p = request.form["max_p"]
+    start_q = request.form["start_q"]
+    max_q = request.form["max_q"]
+    d = request.form["d"]
+    D = request.form["D"]
+
+    # Generating the LSTM model
+    df = read_historic_data(ticker)
+
+    # Generating the date column for predictions
+    start_date = date.today()
+    end_date = date(int(year), int(month), int(day))
+    # Range of prediction dates
+    predict_data = {"Date": pd.date_range(
+        start=start_date, end=end_date)}
+    # df with original prediction dates and dummy close prices
+    to_predict = pd.DataFrame(data=predict_data)
+    to_predict["Close"] = np.nan
+
+    arima_plot, rmse = auto_arima_model(
+        df, int(split), int(start_p), int(max_p), int(start_q), int(max_q), int(d), int(D), new_predictions=True, new_dates=to_predict)
+
+    return render_template(
+        "arima_predict.html.jinja",
+        ticker=ticker,
+        split=split,
+        start_p=start_p,
+        max_p=max_p,
+        start_q=start_q,
+        max_q=max_q,
+        d=d,
+        D=D,
+        arima_plot=arima_plot
+    )
 
 
 @app.route("/<ticker>/model/<model_name>")

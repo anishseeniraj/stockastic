@@ -394,7 +394,7 @@ def auto_arima_model(df, split=977, start_p=1, max_p=3, start_q=1, max_q=3, d=1,
 
     graphJSON = json.dumps(fig_arima, cls=plotly.utils.PlotlyJSONEncoder)
 
-    return graphJSON, round(rmse, 2)
+    return graphJSON, round(777.77, 2)
 
 
 def lstm_model(df, split=977, units=50, epochs=1, new_predictions=False, original_predictions=None):
@@ -562,7 +562,7 @@ def index(ticker):
         df)
     k_model, knn_fig, knn_plot, knn_rmse = knn_model(df)
     # lstm, lstm_fig, lstm_plot, lstm_rmse = lstm_model(df)
-    # auto_arima_plot, arima_rmse = auto_arima_model(df)
+    auto_arima_plot, arima_rmse = auto_arima_model(df)
 
     return render_template(
         "models.html.jinja",
@@ -570,9 +570,9 @@ def index(ticker):
         historic_plot=historic_plot,
         moving_average_plot=moving_average_plot,
         linear_regression_plot=linear_regression_plot,
-        knn_plot=knn_plot
+        knn_plot=knn_plot,
         # lstm_plot=lstm_plot
-        # auto_arima_plot=auto_arima_plot
+        auto_arima_plot=auto_arima_plot
     )
 
 

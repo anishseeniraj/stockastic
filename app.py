@@ -94,7 +94,12 @@ def moving_average_model(df, window=225, split=977, new_predictions=False, new_d
 
     valid['Predictions'] = 0
     valid['Predictions'] = preds
-    # rmse = np.sqrt(np.mean(np.power((np.array(valid['Close']) - preds), 2)))
+
+    rmse = 777.77  # filler error value
+
+    if(new_predictions == False):
+        rmse = np.sqrt(
+            np.mean(np.power((np.array(valid['Close']) - preds), 2)))
 
     # Moving Average Plot
     fig_ma = go.Figure()
@@ -131,7 +136,7 @@ def moving_average_model(df, window=225, split=977, new_predictions=False, new_d
 
     graphJSON = json.dumps(fig_ma, cls=plotly.utils.PlotlyJSONEncoder)
 
-    return graphJSON, round(777.77, 2)
+    return graphJSON, round(rmse, 2)
 
 
 def linear_regression_model(df, split=977):
@@ -146,19 +151,13 @@ def linear_regression_model(df, split=977):
         new_data['Date'][i] = data['Date'][i]
         new_data['Close'][i] = data['Close'][i]
 
-    print(new_data["Date"])
-
     new_data["Date"] = pd.to_datetime(new_data["Date"])
-
-    print(new_data["Date"])
-
     new_data["Date"] = new_data["Date"].map(datetime.toordinal)
-
-    print(new_data["Date"])
 
     train = new_data[:split]
     valid = new_data[split:]
     preds = []
+
     x_train = train.drop("Close", axis=1)
     y_train = train["Close"]
     x_valid = valid.drop("Close", axis=1)
@@ -168,16 +167,11 @@ def linear_regression_model(df, split=977):
 
     linear_model = LinearRegression()
     linear_model.fit(x_train, y_train)
-
     preds = linear_model.predict(x_valid)
-
-    print(x_valid.shape)
-    print(x_valid)
-
     rmse = np.sqrt(np.mean(np.power((np.array(y_valid) - np.array(preds)), 2)))
+
     valid['Predictions'] = 0
     valid['Predictions'] = preds
-
     valid.index = new_data[split:].index
     train.index = new_data[:split].index
     fig_lm = go.Figure()
@@ -358,8 +352,12 @@ def auto_arima_model(df, split=977, start_p=1, max_p=3, start_q=1, max_q=3, d=1,
     #    n_periods = 1259 - split)
     arima_forecast = pd.DataFrame(
         arima_forecast, index=valid.index, columns=['Prediction'])
-    # rmse = np.sqrt(np.mean(
-    #    np.power((np.array(valid['Close']) - np.array(forecast['Prediction'])), 2)))
+    rmse = 777.77  # filler error value
+
+    if(new_predictions == False):
+        rmse = np.sqrt(np.mean(
+            np.power((np.array(valid['Close']) - np.array(arima_forecast['Prediction'])), 2)))
+
     fig_arima = go.Figure()
 
     fig_arima.add_trace(go.Scatter(
@@ -394,7 +392,7 @@ def auto_arima_model(df, split=977, start_p=1, max_p=3, start_q=1, max_q=3, d=1,
 
     graphJSON = json.dumps(fig_arima, cls=plotly.utils.PlotlyJSONEncoder)
 
-    return graphJSON, round(777.77, 2)
+    return graphJSON, round(rmse, 2)
 
 
 def lstm_model(df, split=977, units=50, epochs=1, new_predictions=False, original_predictions=None):
@@ -419,9 +417,6 @@ def lstm_model(df, split=977, units=50, epochs=1, new_predictions=False, origina
     new_data.index = new_data.Date
 
     new_data.drop('Date', axis=1, inplace=True)
-
-    print("new_data - ")
-    print(new_data)
 
     # creating train and test sets
     dataset = new_data.values  # array of arrays containing one value [[value1]
@@ -472,16 +467,10 @@ def lstm_model(df, split=977, units=50, epochs=1, new_predictions=False, origina
 
     # print(inputs[0:60, 0])  # 1D array
 
-    print("initial actual_inputs")
-    print(actual_inputs)
-
     for i in range(60, inputs.shape[0]):
         X_test = []
 
         X_test.append(actual_inputs[i-60:i, 0])
-
-        print("actual_inputs slice -")
-        print(actual_inputs[i-60:i, 0])
 
         X_test = np.array(X_test)  # 2D array
         X_test = np.reshape(
@@ -490,19 +479,12 @@ def lstm_model(df, split=977, units=50, epochs=1, new_predictions=False, origina
         actual_inputs = np.vstack([actual_inputs, predicted_price[0]])
         predicted_price = scaler.inverse_transform(predicted_price)
 
-        print("current prediction -")
-        print(predicted_price[0])
-        print(predicted_price[0, 0])
-
         closing_price.append(predicted_price[0, 0])
 
-        print("actual_inputs -")
-        print(len(actual_inputs))
-        print(actual_inputs)
+    rmse = 777.77
 
-    print("closing price predictions -")
-    print(closing_price)
-    # rmse = np.sqrt(np.mean(np.power((valid - closing_price), 2)))
+    if(new_predictions == False):
+        rmse = np.sqrt(np.mean(np.power((valid - closing_price), 2)))
 
     # plotting LSTM
     if(new_predictions):
@@ -547,7 +529,7 @@ def lstm_model(df, split=977, units=50, epochs=1, new_predictions=False, origina
 
     graphJSON = json.dumps(fig_lstm, cls=plotly.utils.PlotlyJSONEncoder)
 
-    return model, fig_lstm, graphJSON, round(777.77, 2)
+    return model, fig_lstm, graphJSON, round(rmse, 2)
 
 
 @ app.route("/<ticker>/models")
@@ -561,7 +543,7 @@ def index(ticker):
     linear_model, linear_fig, linear_regression_plot, lr_rmse = linear_regression_model(
         df)
     k_model, knn_fig, knn_plot, knn_rmse = knn_model(df)
-    # lstm, lstm_fig, lstm_plot, lstm_rmse = lstm_model(df)
+    lstm, lstm_fig, lstm_plot, lstm_rmse = lstm_model(df)
     auto_arima_plot, arima_rmse = auto_arima_model(df)
 
     return render_template(
@@ -571,7 +553,7 @@ def index(ticker):
         moving_average_plot=moving_average_plot,
         linear_regression_plot=linear_regression_plot,
         knn_plot=knn_plot,
-        # lstm_plot=lstm_plot
+        lstm_plot=lstm_plot,
         auto_arima_plot=auto_arima_plot
     )
 
@@ -1019,21 +1001,6 @@ def arima_predict_output():
         D=D,
         arima_plot=arima_plot
     )
-
-
-@app.route("/<ticker>/model/<model_name>")
-def show(ticker, model_name):
-    return "Descriptive view of the model"
-
-
-@app.route("/<ticker>/model/<model_name>/train")
-def train(ticker, model_name):
-    return "Train the MODEL_NAME model by tuning the following hyperparameters"
-
-
-@app.route("/<ticker>/model/<model_name>/predict")
-def predict(ticker, model_name):
-    return "Predict price of TICKER at a custom date"
 
 
 if __name__ == "__main__":

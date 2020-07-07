@@ -1,5 +1,9 @@
 # stockastic (WORK IN PROGRESS)
 
+<p>App still has to be styled</li>
+
+![Proof of Concept Demo](demo-poc.gif)
+
 <h3>Random Personal Notes/Webliography</h3>
 
 <ul>

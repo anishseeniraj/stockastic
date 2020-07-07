@@ -20,4 +20,5 @@
   <li>Allow the user to select which models to display in the models route</li>
   <li>Document how to deal with dates while using a linear model for model.fit()</li>
   <li>Add hyperlinks to "read more about x model here"</li>
+  <li>Mass app refactor</li>
 </ul>

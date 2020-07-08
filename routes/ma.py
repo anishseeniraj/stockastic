@@ -4,10 +4,6 @@ import numpy as np
 import plotly
 import plotly.graph_objects as go
 import json
-# from datetime import datetime
-# from datetime import timezone
-# from datetime import date
-# from dateutil.relativedelta import relativedelta
 from utils.stock_preprocess import *
 from utils.stock_models import *
 
@@ -21,7 +17,7 @@ def ma_customize_input(ticker, window, split):
         df, int(window), int(split))
 
     return render_template(
-        "ma_customize.html.jinja",
+        "ma/ma_customize.html.jinja",
         ticker=ticker,
         moving_average_plot=moving_average_plot,
         rmse=rmse,
@@ -46,7 +42,7 @@ def ma_predict_input(ticker, window, split):
         df, int(window), int(split))
 
     return render_template(
-        "ma_predict.html.jinja",
+        "ma/ma_predict.html.jinja",
         ticker=ticker,
         window=window,
         split=split,
@@ -82,7 +78,7 @@ def ma_predict_output():
         df, int(window), int(split), new_predictions=True, new_dates=to_predict)
 
     return render_template(
-        "ma_predict.html.jinja",
+        "ma/ma_predict.html.jinja",
         ticker=ticker,
         window=window,
         split=split,

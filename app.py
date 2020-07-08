@@ -13,12 +13,16 @@ from utils.stock_models import *
 from routes.ma import ma
 from routes.lr import lr
 from routes.knn import knn
+from routes.arima import arima
+from routes.lstm import lstm
 
 app = Flask(__name__, template_folder="templates")
 
 app.register_blueprint(ma)
 app.register_blueprint(lr)
 app.register_blueprint(knn)
+app.register_blueprint(arima)
+app.register_blueprint(lstm)
 
 
 @app.route("/")
@@ -211,334 +215,334 @@ def ticker():
 #     return linear_model, fig_lm, graphJSON, round(rmse, 2)
 
 
-def knn_model(df, split=977, n_neighbors=2, weights="distance", p=2, new_predictions=False, ordinal_prediction_dates=None, original_prediction_dates=None):
-    df['Date'] = pd.to_datetime(df.Date, format='%Y-%m-%d')
-    df.index = df['Date']
-
-    # creating dataframe with date and the target variable
-    data = df.sort_index(ascending=True, axis=0)
-    new_data = pd.DataFrame(index=range(0, len(df)), columns=['Date', 'Close'])
-
-    for i in range(0, len(data)):
-        new_data['Date'][i] = data['Date'][i]
-        new_data['Close'][i] = data['Close'][i]
-
-    new_data["Date"] = pd.to_datetime(new_data["Date"])
-    new_data["Date"] = new_data["Date"].map(datetime.toordinal)
-    train = new_data[:split]
-    valid = new_data[split:]
-    preds = []
-    x_train = train.drop("Close", axis=1)
-    y_train = train["Close"]
-    x_valid = valid.drop("Close", axis=1)
-
-    if(new_predictions == True):
-        x_valid = x_valid.append(ordinal_prediction_dates, ignore_index=True)
-
-    y_valid = valid["Close"]
-
-    from sklearn import neighbors
-    from sklearn.model_selection import GridSearchCV
-    from sklearn.preprocessing import MinMaxScaler
-
-    scaler = MinMaxScaler(feature_range=(0, 1))
-
-    # scaling data
-    x_train_scaled = scaler.fit_transform(x_train)
-    x_train = pd.DataFrame(x_train_scaled)
-    x_valid_scaled = scaler.fit_transform(x_valid)
-    x_valid = pd.DataFrame(x_valid_scaled)
-    print("x_valid before predict")
-    print(x_valid)
-
-    # using gridsearch to find the best parameter for initial model generation
-
-    # params = {
-    #     "n_neighbors": [2, 3, 4, 5, 6, 7, 8, 9],
-    #     "weights": ["uniform", "distance"],
-    #     "p": [2, 3, 4, 5]
-    # }
-
-    knn_model = neighbors.KNeighborsRegressor(
-        n_neighbors=n_neighbors,
-        weights=weights,
-        p=p
-    )
-
-    # knn_model = GridSearchCV(knn, params, cv=5)
-
-    # fit the model and make predictions
-    knn_model.fit(x_train, y_train)
-
-    # gridsearch results for original model were -
-    #     n_neighbors = 2
-    #     weights = distance
-    #     minkowski metric (p) = 2
-
-    preds = knn_model.predict(x_valid)
-    rmse = 0
-
-    if(new_predictions == False):
-        rmse = np.sqrt(
-            np.mean(np.power((np.array(y_valid) - np.array(preds)), 2)))
-
-    print("Predictions and length")
-    print(len(preds))
-    print(preds)
-
-    # valid["Predictions"] = 0
-    # valid["Predictions"] = preds
-    fig_knn = go.Figure()
-
-    fig_knn.add_trace(go.Scatter(
-        x=df["Date"],
-        y=train["Close"],
-        mode="lines",
-        name="Training"
-    ))
-
-    fig_knn.add_trace(go.Scatter(
-        x=df["Date"][split:],
-        y=valid["Close"],
-        mode="lines",
-        name="Validation"
-    ))
-
-    if(new_predictions == True):
-        all_prediction_dates = df["Date"][split:]
-        all_prediction_dates = all_prediction_dates.append(
-            original_prediction_dates["Date"], ignore_index=True)
-
-        fig_knn.add_trace(go.Scatter(
-            x=all_prediction_dates,
-            y=preds,
-            mode="lines",
-            name="Predictions"
-        ))
-    else:
-        fig_knn.add_trace(go.Scatter(
-            x=df["Date"][split:],
-            y=preds,
-            mode="lines",
-            name="Predictions"
-        ))
-
-    graphJSON = json.dumps(fig_knn, cls=plotly.utils.PlotlyJSONEncoder)
-
-    return knn_model, fig_knn, graphJSON, round(rmse, 2)
-
-
-def auto_arima_model(df, split=977, start_p=1, max_p=3, start_q=1, max_q=3, d=1, D=1, new_predictions=False, new_dates=None):
-    import pmdarima as pm
-
-    df = df.sort_index(ascending=True, axis=0)
-    new_data = df[["Date", "Close"]]
-
-    if(new_predictions):
-        new_data = new_data.append(new_dates, ignore_index=True)
-
-    # Training-validation splits
-    train = []
-    valid = []
-
-    if(new_predictions):
-        train = new_data[:len(df)]
-        valid = new_data[len(df):]
-    else:
-        train = new_data[:split]
-        valid = new_data[split:]
-
-    training = train['Close']
-    validation = valid['Close']
-
-    arima_model = pm.arima.auto_arima(training, start_p=start_p, max_p=max_p, start_q=start_q, max_q=max_q, m=12, start_P=0,
-                                      seasonal=True, d=d, D=D, trace=True, error_action='ignore', suppress_warnings=True)
-
-    arima_model.fit(training)
-
-    arima_forecast = arima_model.predict(n_periods=len(valid))
-    # arima_forecast = arima_model.predict(
-    #    n_periods = 1259 - split)
-    arima_forecast = pd.DataFrame(
-        arima_forecast, index=valid.index, columns=['Prediction'])
-    rmse = 777.77  # filler error value
-
-    if(new_predictions == False):
-        rmse = np.sqrt(np.mean(
-            np.power((np.array(valid['Close']) - np.array(arima_forecast['Prediction'])), 2)))
-
-    fig_arima = go.Figure()
-
-    fig_arima.add_trace(go.Scatter(
-        x=train["Date"],
-        y=train["Close"],
-        mode="lines",
-        name="Training"
-    ))
-
-    if(new_predictions):
-        fig_arima.add_trace(go.Scatter(
-            x=valid["Date"],
-            y=arima_forecast["Prediction"],
-            mode="lines",
-            name="Predictions"
-        ))
-    else:
-        fig_arima.add_trace(go.Scatter(
-            x=df["Date"][split:],
-            y=valid["Close"],
-            mode="lines",
-            name="Validation"
-        ))
-
-    if(new_predictions == False):
-        fig_arima.add_trace(go.Scatter(
-            x=df["Date"][split:],
-            y=arima_forecast["Prediction"],
-            mode="lines",
-            name="Predictions"
-        ))
-
-    graphJSON = json.dumps(fig_arima, cls=plotly.utils.PlotlyJSONEncoder)
-
-    return graphJSON, round(rmse, 2)
-
-
-def lstm_model(df, split=977, units=50, epochs=1, new_predictions=False, original_predictions=None):
-    from sklearn.preprocessing import MinMaxScaler
-    from keras.models import Sequential
-    from keras.layers import Dense, Dropout, LSTM
-
-    # creating dataframe
-    data = df.sort_index(ascending=True, axis=0)
-    new_data = pd.DataFrame(index=range(0, len(df)),
-                            columns=['Date', 'Close'])
-
-    for i in range(0, len(data)):
-        new_data['Date'][i] = data['Date'][i]
-        new_data['Close'][i] = data['Close'][i]
-
-    # vertically stack new_data and predictions df
-    if(new_predictions == True):
-        new_data = new_data.append(original_predictions, ignore_index=True)
-
-    # setting index
-    new_data.index = new_data.Date
-
-    new_data.drop('Date', axis=1, inplace=True)
-
-    # creating train and test sets
-    dataset = new_data.values  # array of arrays containing one value [[value1]
-    # [value2]...]
-
-    train = []
-    valid = []
-
-    if(new_predictions):
-        train = dataset[:len(df), :]
-        valid = dataset[len(df):, :]
-    else:
-        train = dataset[0:split, :]
-        valid = dataset[split:, :]
-
-    # converting dataset into x_train and y_train
-    scaler = MinMaxScaler(feature_range=(0, 1))
-    scaled_data = scaler.fit_transform(dataset)
-
-    x_train, y_train = [], []
-
-    for i in range(60, len(train)):
-        x_train.append(scaled_data[i-60:i, 0])
-        y_train.append(scaled_data[i, 0])
-
-    x_train, y_train = np.array(x_train), np.array(y_train)
-    x_train = np.reshape(x_train, (x_train.shape[0], x_train.shape[1], 1))
-
-    # create and fit the LSTM network
-    model = Sequential()
-    model.add(LSTM(
-        units=units,
-        return_sequences=True,
-        input_shape=(x_train.shape[1], 1))
-    )
-    model.add(LSTM(units=units))
-    model.add(Dense(1))  # dimensionality of the output
-    model.compile(loss='mean_squared_error', optimizer='adam')
-    model.fit(x_train, y_train, epochs=epochs, batch_size=1, verbose=2)
-
-    # Starting from the last 60 training data points
-    inputs = new_data[len(new_data) - len(valid) - 60:].values
-    inputs = inputs.reshape(-1, 1)  # 2D array
-    inputs = scaler.transform(inputs)
-    actual_inputs = inputs[0:60]  # 2D array
-    closing_price = []
-    X_test = []
-
-    # print(inputs[0:60, 0])  # 1D array
-
-    for i in range(60, inputs.shape[0]):
-        X_test = []
-
-        X_test.append(actual_inputs[i-60:i, 0])
-
-        X_test = np.array(X_test)  # 2D array
-        X_test = np.reshape(
-            X_test, (X_test.shape[0], X_test.shape[1], 1))  # 3D array
-        predicted_price = model.predict(X_test[0:1])  # 2D array
-        actual_inputs = np.vstack([actual_inputs, predicted_price[0]])
-        predicted_price = scaler.inverse_transform(predicted_price)
-
-        closing_price.append(predicted_price[0, 0])
-
-    rmse = 777.77
-
-    if(new_predictions == False):
-        rmse = np.sqrt(np.mean(np.power((valid - closing_price), 2)))
-
-    # plotting LSTM
-    if(new_predictions):
-        train = new_data[:len(df)]
-        valid = new_data[len(df):]
-    else:
-        train = new_data[:split]
-        valid = new_data[split:]
-
-    valid['Predictions'] = closing_price
-    fig_lstm = go.Figure()
-
-    fig_lstm.add_trace(go.Scatter(
-        x=df["Date"],
-        y=train["Close"],
-        mode="lines",
-        name="Training"
-    ))
-
-    if(new_predictions):
-        fig_lstm.add_trace(go.Scatter(
-            x=new_data.index[len(df) - 60:],
-            y=valid["Predictions"],
-            mode="lines",
-            name="Forecast"
-        ))
-    else:
-        fig_lstm.add_trace(go.Scatter(
-            x=df["Date"][split:],
-            y=valid["Close"],
-            mode="lines",
-            name="Validation"
-        ))
-
-    if(new_predictions == False):
-        fig_lstm.add_trace(go.Scatter(
-            x=df["Date"][split:],
-            y=valid["Predictions"],
-            mode="lines",
-            name="Predictions"
-        ))
-
-    graphJSON = json.dumps(fig_lstm, cls=plotly.utils.PlotlyJSONEncoder)
-
-    return model, fig_lstm, graphJSON, round(rmse, 2)
+# def knn_model(df, split=977, n_neighbors=2, weights="distance", p=2, new_predictions=False, ordinal_prediction_dates=None, original_prediction_dates=None):
+#     df['Date'] = pd.to_datetime(df.Date, format='%Y-%m-%d')
+#     df.index = df['Date']
+
+#     # creating dataframe with date and the target variable
+#     data = df.sort_index(ascending=True, axis=0)
+#     new_data = pd.DataFrame(index=range(0, len(df)), columns=['Date', 'Close'])
+
+#     for i in range(0, len(data)):
+#         new_data['Date'][i] = data['Date'][i]
+#         new_data['Close'][i] = data['Close'][i]
+
+#     new_data["Date"] = pd.to_datetime(new_data["Date"])
+#     new_data["Date"] = new_data["Date"].map(datetime.toordinal)
+#     train = new_data[:split]
+#     valid = new_data[split:]
+#     preds = []
+#     x_train = train.drop("Close", axis=1)
+#     y_train = train["Close"]
+#     x_valid = valid.drop("Close", axis=1)
+
+#     if(new_predictions == True):
+#         x_valid = x_valid.append(ordinal_prediction_dates, ignore_index=True)
+
+#     y_valid = valid["Close"]
+
+#     from sklearn import neighbors
+#     from sklearn.model_selection import GridSearchCV
+#     from sklearn.preprocessing import MinMaxScaler
+
+#     scaler = MinMaxScaler(feature_range=(0, 1))
+
+#     # scaling data
+#     x_train_scaled = scaler.fit_transform(x_train)
+#     x_train = pd.DataFrame(x_train_scaled)
+#     x_valid_scaled = scaler.fit_transform(x_valid)
+#     x_valid = pd.DataFrame(x_valid_scaled)
+#     print("x_valid before predict")
+#     print(x_valid)
+
+#     # using gridsearch to find the best parameter for initial model generation
+
+#     # params = {
+#     #     "n_neighbors": [2, 3, 4, 5, 6, 7, 8, 9],
+#     #     "weights": ["uniform", "distance"],
+#     #     "p": [2, 3, 4, 5]
+#     # }
+
+#     knn_model = neighbors.KNeighborsRegressor(
+#         n_neighbors=n_neighbors,
+#         weights=weights,
+#         p=p
+#     )
+
+#     # knn_model = GridSearchCV(knn, params, cv=5)
+
+#     # fit the model and make predictions
+#     knn_model.fit(x_train, y_train)
+
+#     # gridsearch results for original model were -
+#     #     n_neighbors = 2
+#     #     weights = distance
+#     #     minkowski metric (p) = 2
+
+#     preds = knn_model.predict(x_valid)
+#     rmse = 0
+
+#     if(new_predictions == False):
+#         rmse = np.sqrt(
+#             np.mean(np.power((np.array(y_valid) - np.array(preds)), 2)))
+
+#     print("Predictions and length")
+#     print(len(preds))
+#     print(preds)
+
+#     # valid["Predictions"] = 0
+#     # valid["Predictions"] = preds
+#     fig_knn = go.Figure()
+
+#     fig_knn.add_trace(go.Scatter(
+#         x=df["Date"],
+#         y=train["Close"],
+#         mode="lines",
+#         name="Training"
+#     ))
+
+#     fig_knn.add_trace(go.Scatter(
+#         x=df["Date"][split:],
+#         y=valid["Close"],
+#         mode="lines",
+#         name="Validation"
+#     ))
+
+#     if(new_predictions == True):
+#         all_prediction_dates = df["Date"][split:]
+#         all_prediction_dates = all_prediction_dates.append(
+#             original_prediction_dates["Date"], ignore_index=True)
+
+#         fig_knn.add_trace(go.Scatter(
+#             x=all_prediction_dates,
+#             y=preds,
+#             mode="lines",
+#             name="Predictions"
+#         ))
+#     else:
+#         fig_knn.add_trace(go.Scatter(
+#             x=df["Date"][split:],
+#             y=preds,
+#             mode="lines",
+#             name="Predictions"
+#         ))
+
+#     graphJSON = json.dumps(fig_knn, cls=plotly.utils.PlotlyJSONEncoder)
+
+#     return knn_model, fig_knn, graphJSON, round(rmse, 2)
+
+
+# def auto_arima_model(df, split=977, start_p=1, max_p=3, start_q=1, max_q=3, d=1, D=1, new_predictions=False, new_dates=None):
+#     import pmdarima as pm
+
+#     df = df.sort_index(ascending=True, axis=0)
+#     new_data = df[["Date", "Close"]]
+
+#     if(new_predictions):
+#         new_data = new_data.append(new_dates, ignore_index=True)
+
+#     # Training-validation splits
+#     train = []
+#     valid = []
+
+#     if(new_predictions):
+#         train = new_data[:len(df)]
+#         valid = new_data[len(df):]
+#     else:
+#         train = new_data[:split]
+#         valid = new_data[split:]
+
+#     training = train['Close']
+#     validation = valid['Close']
+
+#     arima_model = pm.arima.auto_arima(training, start_p=start_p, max_p=max_p, start_q=start_q, max_q=max_q, m=12, start_P=0,
+#                                       seasonal=True, d=d, D=D, trace=True, error_action='ignore', suppress_warnings=True)
+
+#     arima_model.fit(training)
+
+#     arima_forecast = arima_model.predict(n_periods=len(valid))
+#     # arima_forecast = arima_model.predict(
+#     #    n_periods = 1259 - split)
+#     arima_forecast = pd.DataFrame(
+#         arima_forecast, index=valid.index, columns=['Prediction'])
+#     rmse = 777.77  # filler error value
+
+#     if(new_predictions == False):
+#         rmse = np.sqrt(np.mean(
+#             np.power((np.array(valid['Close']) - np.array(arima_forecast['Prediction'])), 2)))
+
+#     fig_arima = go.Figure()
+
+#     fig_arima.add_trace(go.Scatter(
+#         x=train["Date"],
+#         y=train["Close"],
+#         mode="lines",
+#         name="Training"
+#     ))
+
+#     if(new_predictions):
+#         fig_arima.add_trace(go.Scatter(
+#             x=valid["Date"],
+#             y=arima_forecast["Prediction"],
+#             mode="lines",
+#             name="Predictions"
+#         ))
+#     else:
+#         fig_arima.add_trace(go.Scatter(
+#             x=df["Date"][split:],
+#             y=valid["Close"],
+#             mode="lines",
+#             name="Validation"
+#         ))
+
+#     if(new_predictions == False):
+#         fig_arima.add_trace(go.Scatter(
+#             x=df["Date"][split:],
+#             y=arima_forecast["Prediction"],
+#             mode="lines",
+#             name="Predictions"
+#         ))
+
+#     graphJSON = json.dumps(fig_arima, cls=plotly.utils.PlotlyJSONEncoder)
+
+#     return graphJSON, round(rmse, 2)
+
+
+# def lstm_model(df, split=977, units=50, epochs=1, new_predictions=False, original_predictions=None):
+#     from sklearn.preprocessing import MinMaxScaler
+#     from keras.models import Sequential
+#     from keras.layers import Dense, Dropout, LSTM
+
+#     # creating dataframe
+#     data = df.sort_index(ascending=True, axis=0)
+#     new_data = pd.DataFrame(index=range(0, len(df)),
+#                             columns=['Date', 'Close'])
+
+#     for i in range(0, len(data)):
+#         new_data['Date'][i] = data['Date'][i]
+#         new_data['Close'][i] = data['Close'][i]
+
+#     # vertically stack new_data and predictions df
+#     if(new_predictions == True):
+#         new_data = new_data.append(original_predictions, ignore_index=True)
+
+#     # setting index
+#     new_data.index = new_data.Date
+
+#     new_data.drop('Date', axis=1, inplace=True)
+
+#     # creating train and test sets
+#     dataset = new_data.values  # array of arrays containing one value [[value1]
+#     # [value2]...]
+
+#     train = []
+#     valid = []
+
+#     if(new_predictions):
+#         train = dataset[:len(df), :]
+#         valid = dataset[len(df):, :]
+#     else:
+#         train = dataset[0:split, :]
+#         valid = dataset[split:, :]
+
+#     # converting dataset into x_train and y_train
+#     scaler = MinMaxScaler(feature_range=(0, 1))
+#     scaled_data = scaler.fit_transform(dataset)
+
+#     x_train, y_train = [], []
+
+#     for i in range(60, len(train)):
+#         x_train.append(scaled_data[i-60:i, 0])
+#         y_train.append(scaled_data[i, 0])
+
+#     x_train, y_train = np.array(x_train), np.array(y_train)
+#     x_train = np.reshape(x_train, (x_train.shape[0], x_train.shape[1], 1))
+
+#     # create and fit the LSTM network
+#     model = Sequential()
+#     model.add(LSTM(
+#         units=units,
+#         return_sequences=True,
+#         input_shape=(x_train.shape[1], 1))
+#     )
+#     model.add(LSTM(units=units))
+#     model.add(Dense(1))  # dimensionality of the output
+#     model.compile(loss='mean_squared_error', optimizer='adam')
+#     model.fit(x_train, y_train, epochs=epochs, batch_size=1, verbose=2)
+
+#     # Starting from the last 60 training data points
+#     inputs = new_data[len(new_data) - len(valid) - 60:].values
+#     inputs = inputs.reshape(-1, 1)  # 2D array
+#     inputs = scaler.transform(inputs)
+#     actual_inputs = inputs[0:60]  # 2D array
+#     closing_price = []
+#     X_test = []
+
+#     # print(inputs[0:60, 0])  # 1D array
+
+#     for i in range(60, inputs.shape[0]):
+#         X_test = []
+
+#         X_test.append(actual_inputs[i-60:i, 0])
+
+#         X_test = np.array(X_test)  # 2D array
+#         X_test = np.reshape(
+#             X_test, (X_test.shape[0], X_test.shape[1], 1))  # 3D array
+#         predicted_price = model.predict(X_test[0:1])  # 2D array
+#         actual_inputs = np.vstack([actual_inputs, predicted_price[0]])
+#         predicted_price = scaler.inverse_transform(predicted_price)
+
+#         closing_price.append(predicted_price[0, 0])
+
+#     rmse = 777.77
+
+#     if(new_predictions == False):
+#         rmse = np.sqrt(np.mean(np.power((valid - closing_price), 2)))
+
+#     # plotting LSTM
+#     if(new_predictions):
+#         train = new_data[:len(df)]
+#         valid = new_data[len(df):]
+#     else:
+#         train = new_data[:split]
+#         valid = new_data[split:]
+
+#     valid['Predictions'] = closing_price
+#     fig_lstm = go.Figure()
+
+#     fig_lstm.add_trace(go.Scatter(
+#         x=df["Date"],
+#         y=train["Close"],
+#         mode="lines",
+#         name="Training"
+#     ))
+
+#     if(new_predictions):
+#         fig_lstm.add_trace(go.Scatter(
+#             x=new_data.index[len(df) - 60:],
+#             y=valid["Predictions"],
+#             mode="lines",
+#             name="Forecast"
+#         ))
+#     else:
+#         fig_lstm.add_trace(go.Scatter(
+#             x=df["Date"][split:],
+#             y=valid["Close"],
+#             mode="lines",
+#             name="Validation"
+#         ))
+
+#     if(new_predictions == False):
+#         fig_lstm.add_trace(go.Scatter(
+#             x=df["Date"][split:],
+#             y=valid["Predictions"],
+#             mode="lines",
+#             name="Predictions"
+#         ))
+
+#     graphJSON = json.dumps(fig_lstm, cls=plotly.utils.PlotlyJSONEncoder)
+
+#     return model, fig_lstm, graphJSON, round(rmse, 2)
 
 
 @app.route("/<ticker>/models")
@@ -552,7 +556,7 @@ def index(ticker):
     linear_model, linear_fig, linear_regression_plot, lr_rmse = linear_regression_model(
         df)
     k_model, knn_fig, knn_plot, knn_rmse = knn_model(df)
-    # lstm, lstm_fig, lstm_plot, lstm_rmse = lstm_model(df)
+    lstm, lstm_fig, lstm_plot, lstm_rmse = lstm_model(df)
     # auto_arima_plot, arima_rmse = auto_arima_model(df)
 
     return render_template(
@@ -560,8 +564,8 @@ def index(ticker):
         ticker=ticker,
         historic_plot=historic_plot,
         moving_average_plot=moving_average_plot,
-        linear_regression_plot=linear_regression_plot, knn_plot=knn_plot
-        # lstm_plot=lstm_plot,
+        linear_regression_plot=linear_regression_plot, knn_plot=knn_plot,
+        lstm_plot=lstm_plot
         # auto_arima_plot=auto_arima_plot
     )
 
@@ -754,184 +758,184 @@ def index(ticker):
 #     )
 
 
-@app.route("/<ticker>/lstm/customize/<split>/<units>/<epochs>")
-def lstm_customize_input(ticker, split, units, epochs):
-    df = read_historic_data(ticker)
-    lstm, lstm_fig, lstm_plot, rmse = lstm_model(
-        df, int(split), int(units), int(epochs))
+# @app.route("/<ticker>/lstm/customize/<split>/<units>/<epochs>")
+# def lstm_customize_input(ticker, split, units, epochs):
+#     df = read_historic_data(ticker)
+#     lstm, lstm_fig, lstm_plot, rmse = lstm_model(
+#         df, int(split), int(units), int(epochs))
 
-    return render_template(
-        "lstm_customize.html.jinja",
-        ticker=ticker,
-        lstm_plot=lstm_plot,
-        rmse=rmse,
-        split=split,
-        units=units,
-        epochs=epochs,
-    )
-
-
-@app.route("/lstm/customize", methods=["POST"])
-def lstm_customize_output():
-    ticker = request.form["ticker"]
-    split = request.form["split"]
-    units = request.form["units"]
-    epochs = request.form["epochs"]
-
-    return redirect("/" + ticker + "/lstm/customize/" + split + "/" + units + "/" + epochs)
+#     return render_template(
+#         "lstm_customize.html.jinja",
+#         ticker=ticker,
+#         lstm_plot=lstm_plot,
+#         rmse=rmse,
+#         split=split,
+#         units=units,
+#         epochs=epochs,
+#     )
 
 
-@app.route("/<ticker>/lstm/predict/<split>/<units>/<epochs>/")
-def lstm_predict_input(ticker, split, units, epochs):
-    df = read_historic_data(ticker)
-    lstm, lstm_fig, lstm_plot, rmse = lstm_model(
-        df, int(split), int(units), int(epochs))
+# @app.route("/lstm/customize", methods=["POST"])
+# def lstm_customize_output():
+#     ticker = request.form["ticker"]
+#     split = request.form["split"]
+#     units = request.form["units"]
+#     epochs = request.form["epochs"]
 
-    return render_template(
-        "lstm_predict.html.jinja",
-        ticker=ticker,
-        split=split,
-        units=units,
-        epochs=epochs,
-        lstm_plot=lstm_plot
-    )
+#     return redirect("/" + ticker + "/lstm/customize/" + split + "/" + units + "/" + epochs)
 
 
-@app.route("/lstm/predict", methods=["POST"])
-def lstm_predict_output():
-    # Form submission values
-    year = request.form["year"]
-    month = request.form["month"]
-    day = request.form["day"]
-    split = request.form["split"]
-    ticker = request.form["ticker"]
-    units = request.form["units"]
-    epochs = request.form["epochs"]
+# @app.route("/<ticker>/lstm/predict/<split>/<units>/<epochs>/")
+# def lstm_predict_input(ticker, split, units, epochs):
+#     df = read_historic_data(ticker)
+#     lstm, lstm_fig, lstm_plot, rmse = lstm_model(
+#         df, int(split), int(units), int(epochs))
 
-    # Generating the LSTM model
-    df = read_historic_data(ticker)
-
-    # Generating the date column for predictions
-    start_date = date.today()
-    end_date = date(int(year), int(month), int(day))
-    # Range of prediction dates
-    predict_data = {"Date": pd.date_range(
-        start=start_date, end=end_date)}
-    # df with original prediction dates and dummy close prices
-    to_predict = pd.DataFrame(data=predict_data)
-    to_predict["Close"] = np.nan
-
-    lstm, lstm_fig, lstm_plot, rmse = lstm_model(
-        df, int(split), int(units), int(epochs), new_predictions=True, original_predictions=to_predict)
-
-    return render_template(
-        "lstm_predict.html.jinja",
-        ticker=ticker,
-        split=split,
-        units=units,
-        epochs=epochs,
-        lstm_plot=lstm_plot
-    )
+#     return render_template(
+#         "lstm_predict.html.jinja",
+#         ticker=ticker,
+#         split=split,
+#         units=units,
+#         epochs=epochs,
+#         lstm_plot=lstm_plot
+#     )
 
 
-@app.route("/<ticker>/arima/customize/<split>/<start_p>/<max_p>/<start_q>/<max_q>/<d>/<D>")
-def arima_customize_input(ticker, split, start_p, max_p, start_q, max_q, d, D):
-    df = read_historic_data(ticker)
-    auto_arima_plot, rmse = auto_arima_model(df, int(split), int(
-        start_p), int(max_p), int(start_q), int(max_q), int(d), int(D))
+# @app.route("/lstm/predict", methods=["POST"])
+# def lstm_predict_output():
+#     # Form submission values
+#     year = request.form["year"]
+#     month = request.form["month"]
+#     day = request.form["day"]
+#     split = request.form["split"]
+#     ticker = request.form["ticker"]
+#     units = request.form["units"]
+#     epochs = request.form["epochs"]
 
-    return render_template(
-        "arima_customize.html.jinja",
-        ticker=ticker,
-        auto_arima_plot=auto_arima_plot,
-        rmse=rmse,
-        split=split,
-        start_p=start_p,
-        max_p=max_p,
-        start_q=start_q,
-        max_q=max_q,
-        d=d,
-        D=D
-    )
+#     # Generating the LSTM model
+#     df = read_historic_data(ticker)
 
+#     # Generating the date column for predictions
+#     start_date = date.today()
+#     end_date = date(int(year), int(month), int(day))
+#     # Range of prediction dates
+#     predict_data = {"Date": pd.date_range(
+#         start=start_date, end=end_date)}
+#     # df with original prediction dates and dummy close prices
+#     to_predict = pd.DataFrame(data=predict_data)
+#     to_predict["Close"] = np.nan
 
-@app.route("/arima/customize", methods=["POST"])
-def arima_customize_output():
-    ticker = request.form["ticker"]
-    split = request.form["split"]
-    start_p = request.form["start_p"]
-    max_p = request.form["max_p"]
-    start_q = request.form["start_q"]
-    max_q = request.form["max_q"]
-    d = request.form["d"]
-    D = request.form["D"]
+#     lstm, lstm_fig, lstm_plot, rmse = lstm_model(
+#         df, int(split), int(units), int(epochs), new_predictions=True, original_predictions=to_predict)
 
-    return redirect("/" + ticker + "/arima/customize/" + split + "/" + start_p + "/" + max_p + "/" + start_q + "/" + max_q + "/" + d + "/" + D)
-
-
-@app.route("/<ticker>/arima/predict/<split>/<start_p>/<max_p>/<start_q>/<max_q>/<d>/<D>")
-def arima_predict_input(ticker, split, start_p, max_p, start_q, max_q, d, D):
-    df = read_historic_data(ticker)
-    arima_plot, rmse = auto_arima_model(
-        df, int(split), int(start_p), int(max_p), int(start_q), int(max_q), int(d), int(D))
-
-    return render_template(
-        "arima_predict.html.jinja",
-        ticker=ticker,
-        split=split,
-        start_p=start_p,
-        max_p=max_p,
-        start_q=start_q,
-        max_q=max_q,
-        d=d,
-        D=D,
-        arima_plot=arima_plot
-    )
+#     return render_template(
+#         "lstm_predict.html.jinja",
+#         ticker=ticker,
+#         split=split,
+#         units=units,
+#         epochs=epochs,
+#         lstm_plot=lstm_plot
+#     )
 
 
-@app.route("/arima/predict", methods=["POST"])
-def arima_predict_output():
-    # Form submission values
-    year = request.form["year"]
-    month = request.form["month"]
-    day = request.form["day"]
-    split = request.form["split"]
-    ticker = request.form["ticker"]
-    start_p = request.form["start_p"]
-    max_p = request.form["max_p"]
-    start_q = request.form["start_q"]
-    max_q = request.form["max_q"]
-    d = request.form["d"]
-    D = request.form["D"]
+# @app.route("/<ticker>/arima/customize/<split>/<start_p>/<max_p>/<start_q>/<max_q>/<d>/<D>")
+# def arima_customize_input(ticker, split, start_p, max_p, start_q, max_q, d, D):
+#     df = read_historic_data(ticker)
+#     auto_arima_plot, rmse = auto_arima_model(df, int(split), int(
+#         start_p), int(max_p), int(start_q), int(max_q), int(d), int(D))
 
-    # Reading stock data
-    df = read_historic_data(ticker)
+#     return render_template(
+#         "arima_customize.html.jinja",
+#         ticker=ticker,
+#         auto_arima_plot=auto_arima_plot,
+#         rmse=rmse,
+#         split=split,
+#         start_p=start_p,
+#         max_p=max_p,
+#         start_q=start_q,
+#         max_q=max_q,
+#         d=d,
+#         D=D
+#     )
 
-    # Generating the date column for predictions
-    # start_date = date.today()
-    # end_date = date(int(year), int(month), int(day))
-    # Range of prediction dates
-    # predict_data = {"Date": pd.date_range(
-    #     start=start_date, end=end_date)}
-    # df with original prediction dates and dummy close prices
-    to_predict = generate_dates_until(int(year), int(month), int(day))
-    to_predict["Close"] = np.nan
 
-    arima_plot, rmse = auto_arima_model(
-        df, int(split), int(start_p), int(max_p), int(start_q), int(max_q), int(d), int(D), new_predictions=True, new_dates=to_predict)
+# @app.route("/arima/customize", methods=["POST"])
+# def arima_customize_output():
+#     ticker = request.form["ticker"]
+#     split = request.form["split"]
+#     start_p = request.form["start_p"]
+#     max_p = request.form["max_p"]
+#     start_q = request.form["start_q"]
+#     max_q = request.form["max_q"]
+#     d = request.form["d"]
+#     D = request.form["D"]
 
-    return render_template(
-        "arima_predict.html.jinja",
-        ticker=ticker,
-        split=split,
-        start_p=start_p,
-        max_p=max_p,
-        start_q=start_q,
-        max_q=max_q,
-        d=d,
-        D=D,
-        arima_plot=arima_plot
-    )
+#     return redirect("/" + ticker + "/arima/customize/" + split + "/" + start_p + "/" + max_p + "/" + start_q + "/" + max_q + "/" + d + "/" + D)
+
+
+# @app.route("/<ticker>/arima/predict/<split>/<start_p>/<max_p>/<start_q>/<max_q>/<d>/<D>")
+# def arima_predict_input(ticker, split, start_p, max_p, start_q, max_q, d, D):
+#     df = read_historic_data(ticker)
+#     arima_plot, rmse = auto_arima_model(
+#         df, int(split), int(start_p), int(max_p), int(start_q), int(max_q), int(d), int(D))
+
+#     return render_template(
+#         "arima_predict.html.jinja",
+#         ticker=ticker,
+#         split=split,
+#         start_p=start_p,
+#         max_p=max_p,
+#         start_q=start_q,
+#         max_q=max_q,
+#         d=d,
+#         D=D,
+#         arima_plot=arima_plot
+#     )
+
+
+# @app.route("/arima/predict", methods=["POST"])
+# def arima_predict_output():
+#     # Form submission values
+#     year = request.form["year"]
+#     month = request.form["month"]
+#     day = request.form["day"]
+#     split = request.form["split"]
+#     ticker = request.form["ticker"]
+#     start_p = request.form["start_p"]
+#     max_p = request.form["max_p"]
+#     start_q = request.form["start_q"]
+#     max_q = request.form["max_q"]
+#     d = request.form["d"]
+#     D = request.form["D"]
+
+#     # Reading stock data
+#     df = read_historic_data(ticker)
+
+#     # Generating the date column for predictions
+#     # start_date = date.today()
+#     # end_date = date(int(year), int(month), int(day))
+#     # Range of prediction dates
+#     # predict_data = {"Date": pd.date_range(
+#     #     start=start_date, end=end_date)}
+#     # df with original prediction dates and dummy close prices
+#     to_predict = generate_dates_until(int(year), int(month), int(day))
+#     to_predict["Close"] = np.nan
+
+#     arima_plot, rmse = auto_arima_model(
+#         df, int(split), int(start_p), int(max_p), int(start_q), int(max_q), int(d), int(D), new_predictions=True, new_dates=to_predict)
+
+#     return render_template(
+#         "arima_predict.html.jinja",
+#         ticker=ticker,
+#         split=split,
+#         start_p=start_p,
+#         max_p=max_p,
+#         start_q=start_q,
+#         max_q=max_q,
+#         d=d,
+#         D=D,
+#         arima_plot=arima_plot
+#     )
 
 
 if __name__ == "__main__":

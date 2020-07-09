@@ -33,32 +33,47 @@ def root():
 @app.route("/ticker", methods=["POST"])
 def ticker():
     ticker = request.form["ticker"]
-
-    return redirect("/" + ticker + "/models")
-
-
-@app.route("/<ticker>/models")
-def index(ticker):
-    # Reading stock data
     df = read_historic_data(ticker)
-
-    # Generating plots
     historic_plot = historic_model(df)
-    moving_average_plot, ma_rmse = moving_average_model(df)
-    linear_model, linear_fig, linear_regression_plot, lr_rmse = linear_regression_model(
-        df)
-    k_model, knn_fig, knn_plot, knn_rmse = knn_model(df)
-    lstm, lstm_fig, lstm_plot, lstm_rmse = lstm_model(df)
-    # auto_arima_plot, arima_rmse = auto_arima_model(df)
+    plots = []
+
+    for model in ["ma", "lr", "knn", "lstm", "arima"]:
+        value = request.form.get(model)
+
+        if value:
+            if value == "ma":
+                moving_average_plot, ma_rmse = moving_average_model(df)
+
+                plots.append(moving_average_plot)
+            elif value == "lr":
+                linear_model, linear_fig, linear_regression_plot, lr_rmse = linear_regression_model(
+                    df)
+
+                plots.append(linear_regression_plot)
+            elif value == "knn":
+                k_model, knn_fig, knn_plot, knn_rmse = knn_model(df)
+
+                plots.append(knn_plot)
+            elif value == "lstm":
+                lstm, lstm_fig, lstm_plot, lstm_rmse = lstm_model(df)
+
+                plots.append(lstm_plot)
+            elif value == "arima":
+                auto_arima_plot, arima_rmse = auto_arima_model(df)
+
+                plots.append(auto_arima_plot)
+        else:
+            plots.append("")
 
     return render_template(
         "models.html.jinja",
         ticker=ticker,
         historic_plot=historic_plot,
-        moving_average_plot=moving_average_plot,
-        linear_regression_plot=linear_regression_plot, knn_plot=knn_plot,
-        lstm_plot=lstm_plot
-        # auto_arima_plot=auto_arima_plot
+        moving_average_plot=plots[0],
+        linear_regression_plot=plots[1],
+        knn_plot=plots[2],
+        lstm_plot=plots[3],
+        auto_arima_plot=plots[4]
     )
 
 

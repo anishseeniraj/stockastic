@@ -5,12 +5,12 @@ This module contains functions that deal with preprocessing and utility
 tasks (reading in data, generating forecast dates).
 """
 
-import pandas as pd
-
 from datetime import datetime
 from datetime import timezone
 from datetime import date
 from dateutil.relativedelta import relativedelta
+
+import pandas as pd
 
 
 def read_historic_data(ticker):

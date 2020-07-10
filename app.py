@@ -15,7 +15,6 @@ from flask import Flask, render_template, url_for, request, redirect
 
 from utils.stock_preprocess import *
 from utils.stock_models import *
-
 from routes.ma import ma
 from routes.lr import lr
 from routes.knn import knn

@@ -2,7 +2,7 @@
 Stock prediction models
 
 This module has functions that generate predictive stock models
-and their corresponding visualizations based on user-inputted 
+and their corresponding visualizations based on user-inputted
 hyperparameter values. The current model list includes
     -> Moving Average
     -> Linear Regression
@@ -11,16 +11,15 @@ hyperparameter values. The current model list includes
     -> Autoregressive Integrated Moving Average (Auto-ARIMA)
 """
 
-import pandas as pd
-import numpy as np
-
-import plotly
-import plotly.graph_objects as go
-import json
-
 from datetime import datetime
 from datetime import timezone
 from datetime import date
+import json
+
+import pandas as pd
+import numpy as np
+import plotly
+import plotly.graph_objects as go
 
 
 def historic_model(df):
@@ -42,10 +41,11 @@ def historic_model(df):
 def moving_average_model(df, window=225, split=977, new_predictions=False, new_dates=None):
     """
     Generates a moving average model, its corresponding visualization,
-    and a future forecast based on user-tunable parameters
+    and a future forecast based on user-tunable parameters to optimize
+    the model
     """
 
-    # Setting the date to be the index
+    # Setting the dates to be the index
     df["Date"] = pd.to_datetime(df.Date, format='%Y-%m-%d')
     df.index = df["Date"]
 
@@ -71,7 +71,8 @@ def moving_average_model(df, window=225, split=977, new_predictions=False, new_d
     predictions = []
 
     for i in range(0, valid.shape[0]):
-        total = train['Close'][len(train)-window+i:].sum() + sum(predictions)
+        total = train['Close'][len(train) - window +
+                               i:].sum() + sum(predictions)
         moving_average = total/window
 
         predictions.append(moving_average)
@@ -126,40 +127,52 @@ def moving_average_model(df, window=225, split=977, new_predictions=False, new_d
 
 
 def linear_regression_model(df, split=977):
+    # """
+    # Generates a linear regression model, its corresponding visualization,
+    # and a future forecast based on the selected train : test split ratio
+    # """
+
+    # Setting the dates to be the index
     df['Date'] = pd.to_datetime(df.Date, format='%Y-%m-%d')
     df.index = df['Date']
 
-    # creating dataframe with date and the target variable
-    data = df.sort_index(ascending=True, axis=0)
-    new_data = pd.DataFrame(index=range(0, len(df)), columns=['Date', 'Close'])
+    # Creating a dataframe with the dates and close prices
+    intermediate = df.sort_index(ascending=True, axis=0)
+    data = intermediate[["Date", "Close"]].copy()
 
-    for i in range(0, len(data)):
-        new_data['Date'][i] = data['Date'][i]
-        new_data['Close'][i] = data['Close'][i]
+    # Changing the date to ordinal format so it can be passed into
+    #   the linear model
+    data["Date"] = pd.to_datetime(data["Date"])
+    data["Date"] = data["Date"].map(datetime.toordinal)
 
-    new_data["Date"] = pd.to_datetime(new_data["Date"])
-    new_data["Date"] = new_data["Date"].map(datetime.toordinal)
+    # Splitting the data into training and validation sets
+    train = data[:split]
+    valid = data[split:]
 
-    train = new_data[:split]
-    valid = new_data[split:]
-    preds = []
+    predictions = []
 
     x_train = train.drop("Close", axis=1)
     y_train = train["Close"]
     x_valid = valid.drop("Close", axis=1)
     y_valid = valid["Close"]
 
+    # Defining the linear model and making predictions with it
     from sklearn.linear_model import LinearRegression
 
     linear_model = LinearRegression()
     linear_model.fit(x_train, y_train)
-    preds = linear_model.predict(x_valid)
-    rmse = np.sqrt(np.mean(np.power((np.array(y_valid) - np.array(preds)), 2)))
+    predictions = linear_model.predict(x_valid)
+
+    # Error calculation
+    rmse = np.sqrt(
+        np.mean(np.power((np.array(y_valid) - np.array(predictions)), 2)))
 
     valid['Predictions'] = 0
-    valid['Predictions'] = preds
-    valid.index = new_data[split:].index
-    train.index = new_data[:split].index
+    valid['Predictions'] = predictions
+    valid.index = data[split:].index
+    train.index = data[:split].index
+
+    # Linear Regression plot
     fig_lm = go.Figure()
 
     fig_lm.add_trace(go.Scatter(

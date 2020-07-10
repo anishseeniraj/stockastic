@@ -416,36 +416,38 @@ def auto_arima_model(df, split=977, start_p=1, max_p=3, start_q=1, max_q=3,
     return graphJSON, round(rmse, 2)
 
 
-def lstm_model(df, split=977, units=50, epochs=1, new_predictions=False, original_predictions=None):
+def lstm_model(df, split=977, units=50, epochs=1, new_predictions=False,
+               original_predictions=None):
+    """
+    Generates an LSTM model, its corresponding visualization, and forecast
+    based on user-tunable hyperparameters
+    """
+
     from sklearn.preprocessing import MinMaxScaler
     from keras.models import Sequential
     from keras.layers import Dense, Dropout, LSTM
 
-    # creating dataframe
-    data = df.sort_index(ascending=True, axis=0)
-    new_data = pd.DataFrame(index=range(0, len(df)),
-                            columns=['Date', 'Close'])
+    # Creating dataframe with the dates and close prices
+    df = df.sort_index(ascending=True, axis=0)
+    data = df[["Date", "Close"]].copy()
 
-    for i in range(0, len(data)):
-        new_data['Date'][i] = data['Date'][i]
-        new_data['Close'][i] = data['Close'][i]
+    # If forecast, add forecast dates to the dataset
+    if(new_predictions):
+        data = data.append(original_predictions, ignore_index=True)
 
-    # vertically stack new_data and predictions df
-    if(new_predictions == True):
-        new_data = new_data.append(original_predictions, ignore_index=True)
+    # # Set the index to be the dates
+    data.index = data.Date
 
-    # setting index
-    new_data.index = new_data.Date
+    data.drop('Date', axis=1, inplace=True)
 
-    new_data.drop('Date', axis=1, inplace=True)
-
-    # creating train and test sets
-    dataset = new_data.values  # array of arrays containing one value [[value1]
-    # [value2]...]
+    # Splitting the dataset into training and validation sets
+    dataset = data.values  # 2D array containing values in singletons
 
     train = []
     valid = []
 
+    # If forecast, train on the entire dataset, else train based on the
+    #   train : valid ratio
     if(new_predictions):
         train = dataset[:len(df), :]
         valid = dataset[len(df):, :]
@@ -453,20 +455,21 @@ def lstm_model(df, split=977, units=50, epochs=1, new_predictions=False, origina
         train = dataset[0:split, :]
         valid = dataset[split:, :]
 
-    # converting dataset into x_train and y_train
+    # Scaling the dataset
     scaler = MinMaxScaler(feature_range=(0, 1))
     scaled_data = scaler.fit_transform(dataset)
 
+    # Building out the training sets in the right dimensions
     x_train, y_train = [], []
 
-    for i in range(60, len(train)):
-        x_train.append(scaled_data[i-60:i, 0])
+    for i in range(77, len(train)):  # arbitrary number of training data points
+        x_train.append(scaled_data[i-77:i, 0])
         y_train.append(scaled_data[i, 0])
 
     x_train, y_train = np.array(x_train), np.array(y_train)
     x_train = np.reshape(x_train, (x_train.shape[0], x_train.shape[1], 1))
 
-    # create and fit the LSTM network
+    # Defining the LSTM model and fitting it
     model = Sequential()
     model.add(LSTM(
         units=units,
@@ -474,24 +477,23 @@ def lstm_model(df, split=977, units=50, epochs=1, new_predictions=False, origina
         input_shape=(x_train.shape[1], 1))
     )
     model.add(LSTM(units=units))
-    model.add(Dense(1))  # dimensionality of the output
+    model.add(Dense(1))  # Dimensionality of the output
     model.compile(loss='mean_squared_error', optimizer='adam')
     model.fit(x_train, y_train, epochs=epochs, batch_size=1, verbose=2)
 
-    # Starting from the last 60 training data points
-    inputs = new_data[len(new_data) - len(valid) - 60:].values
+    # Making predictions starting with the last 77 training points
+    inputs = data[len(data) - len(valid) - 77:].values
     inputs = inputs.reshape(-1, 1)  # 2D array
     inputs = scaler.transform(inputs)
-    actual_inputs = inputs[0:60]  # 2D array
+    actual_inputs = inputs[0:77]  # 2D array
     closing_price = []
     X_test = []
 
-    # print(inputs[0:60, 0])  # 1D array
-
-    for i in range(60, inputs.shape[0]):
+    # Moving averages with a window of 77
+    for i in range(77, inputs.shape[0]):
         X_test = []
 
-        X_test.append(actual_inputs[i-60:i, 0])
+        X_test.append(actual_inputs[i-77:i, 0])
 
         X_test = np.array(X_test)  # 2D array
         X_test = np.reshape(
@@ -502,20 +504,23 @@ def lstm_model(df, split=977, units=50, epochs=1, new_predictions=False, origina
 
         closing_price.append(predicted_price[0, 0])
 
-    rmse = 777.77
+    rmse = 777.77  # filler error value
 
+    # Calculate error value if not forecast
     if(new_predictions == False):
         rmse = np.sqrt(np.mean(np.power((valid - closing_price), 2)))
 
-    # plotting LSTM
+    # Re-assign training and validation sets based on forecast requirement
     if(new_predictions):
-        train = new_data[:len(df)]
-        valid = new_data[len(df):]
+        train = data[:len(df)]
+        valid = data[len(df):]
     else:
-        train = new_data[:split]
-        valid = new_data[split:]
+        train = data[:split]
+        valid = data[split:]
 
     valid['Predictions'] = closing_price
+
+    # LSTM plot
     fig_lstm = go.Figure()
 
     fig_lstm.add_trace(go.Scatter(
@@ -527,7 +532,7 @@ def lstm_model(df, split=977, units=50, epochs=1, new_predictions=False, origina
 
     if(new_predictions):
         fig_lstm.add_trace(go.Scatter(
-            x=new_data.index[len(df) - 60:],
+            x=data.index[len(df) - 77:],
             y=valid["Predictions"],
             mode="lines",
             name="Forecast"

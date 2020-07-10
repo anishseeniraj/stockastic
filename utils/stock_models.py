@@ -1,15 +1,33 @@
+"""
+Stock prediction models
+
+This module has functions that generate predictive stock models
+and their corresponding visualizations based on user-inputted 
+hyperparameter values. The current model list includes
+    -> Moving Average
+    -> Linear Regression
+    -> K-Nearest Neighbors (KNN)
+    -> Long Short Term Memory (LSTM)
+    -> Autoregressive Integrated Moving Average (Auto-ARIMA)
+"""
+
 import pandas as pd
 import numpy as np
+
 import plotly
 import plotly.graph_objects as go
 import json
+
 from datetime import datetime
 from datetime import timezone
 from datetime import date
 
 
 def historic_model(df):
-    # Original Trend
+    """
+    Returns a plotly visualization of the historic stock price
+    """
+
     data = [go.Candlestick(
         x=df["Date"],
         open=df["Open"],
@@ -22,47 +40,51 @@ def historic_model(df):
 
 
 def moving_average_model(df, window=225, split=977, new_predictions=False, new_dates=None):
-    # Moving Average
-    df['Date'] = pd.to_datetime(df.Date, format='%Y-%m-%d')
-    df.index = df['Date']
+    """
+    Generates a moving average model, its corresponding visualization,
+    and a future forecast based on user-tunable parameters
+    """
 
-    # creating dataframe with date and the target variable
-    data = df.sort_index(ascending=True, axis=0)
-    new_data = pd.DataFrame(index=range(0, len(df)), columns=['Date', 'Close'])
+    # Setting the date to be the index
+    df["Date"] = pd.to_datetime(df.Date, format='%Y-%m-%d')
+    df.index = df["Date"]
 
-    for i in range(0, len(data)):
-        new_data['Date'][i] = data['Date'][i]
-        new_data['Close'][i] = data['Close'][i]
+    # Creating a dataframe with date and close price
+    data = df[["Date", "Close"]].copy()
 
-    new_data = new_data.append(new_dates, ignore_index=True)
+    # Appending forecast dates if any
+    data = data.append(new_dates, ignore_index=True)
 
-    # splitting into train and validation
+    # Splitting data into training and validation sets
     train = []
     valid = []
 
+    # If forecast, use all the data to train the model, else the
+    #   user-inputted train : valid ratio
     if(new_predictions):
-        train = new_data[:len(df)]
-        valid = new_data[len(df):]
+        train = data[:len(df)]
+        valid = data[len(df):]
     else:
-        train = new_data[:split]
-        valid = new_data[split:]
+        train = data[:split]
+        valid = data[split:]
 
-    preds = []
+    predictions = []
 
     for i in range(0, valid.shape[0]):
-        a = train['Close'][len(train)-window+i:].sum() + sum(preds)
-        b = a/window
+        total = train['Close'][len(train)-window+i:].sum() + sum(predictions)
+        moving_average = total/window
 
-        preds.append(b)
+        predictions.append(moving_average)
 
-    valid['Predictions'] = 0
-    valid['Predictions'] = preds
+    # Create a predictions column in the validation set
+    valid['Predictions'] = predictions
 
     rmse = 777.77  # filler error value
 
+    # Calculate the error appropriately if it's not a forecast
     if(new_predictions == False):
         rmse = np.sqrt(
-            np.mean(np.power((np.array(valid['Close']) - preds), 2)))
+            np.mean(np.power((np.array(valid['Close']) - predictions), 2)))
 
     # Moving Average Plot
     fig_ma = go.Figure()
@@ -74,6 +96,7 @@ def moving_average_model(df, window=225, split=977, new_predictions=False, new_d
         name="Training"
     ))
 
+    # If forecast, plot the forecast values and not the validation data
     if(new_predictions):
         fig_ma.add_trace(go.Scatter(
             x=valid["Date"],

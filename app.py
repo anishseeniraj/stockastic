@@ -1,13 +1,17 @@
+"""
+Main application router file
+
+This script contains the homepage routes for the application (serves the 
+homepage and reads in initial user-input).
+
+It requires utils.stock_preprocess and utils.stock_models to 
+    -> Preprocess raw stock data
+    -> Execute models and present visualizations
+Addtionally, it requires all the custom router files (routes for each 
+machine learning model) to be registered.
+"""
+
 from flask import Flask, render_template, url_for, request, redirect
-import pandas as pd
-import numpy as np
-import plotly
-import plotly.graph_objects as go
-import json
-from datetime import datetime
-from datetime import timezone
-from datetime import date
-from dateutil.relativedelta import relativedelta
 from utils.stock_preprocess import *
 from utils.stock_models import *
 from routes.ma import ma
@@ -18,6 +22,7 @@ from routes.lstm import lstm
 
 app = Flask(__name__, template_folder="templates")
 
+# Register ML models routes
 app.register_blueprint(ma)
 app.register_blueprint(lr)
 app.register_blueprint(knn)
@@ -32,9 +37,14 @@ def root():
 
 @app.route("/ticker", methods=["POST"])
 def ticker():
+    """
+    Reads stock data based on the input ticker and generates plots based 
+    on the selected models
+    """
+
     ticker = request.form["ticker"]
-    df = read_historic_data(ticker)
-    historic_plot = historic_model(df)
+    df = read_historic_data(ticker)  # read past 5y stock performance data
+    historic_plot = historic_model(df)  # plot historic price
     plots = []
 
     for model in ["ma", "lr", "knn", "lstm", "arima"]:
@@ -63,7 +73,7 @@ def ticker():
 
                 plots.append(auto_arima_plot)
         else:
-            plots.append("")
+            plots.append("")  # model not selected
 
     return render_template(
         "models.html.jinja",

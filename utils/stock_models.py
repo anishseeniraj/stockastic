@@ -41,7 +41,7 @@ def historic_model(df):
 def moving_average_model(df, window=225, split=977, new_predictions=False, new_dates=None):
     """
     Generates a moving average model, its corresponding visualization,
-    and a future forecast based on user-tunable parameters to optimize
+    and a forecast based on user-tunable parameters to optimize
     the model
     """
 
@@ -127,10 +127,10 @@ def moving_average_model(df, window=225, split=977, new_predictions=False, new_d
 
 
 def linear_regression_model(df, split=977):
-    # """
-    # Generates a linear regression model, its corresponding visualization,
-    # and a future forecast based on the selected train : test split ratio
-    # """
+    """
+    Generates a linear regression model, its corresponding visualization,
+    and a forecast based on the selected train : test split ratio
+    """
 
     # Setting the dates to be the index
     df['Date'] = pd.to_datetime(df.Date, format='%Y-%m-%d')
@@ -201,47 +201,58 @@ def linear_regression_model(df, split=977):
     return linear_model, fig_lm, graphJSON, round(rmse, 2)
 
 
-def knn_model(df, split=977, n_neighbors=2, weights="distance", p=2, new_predictions=False, ordinal_prediction_dates=None, original_prediction_dates=None):
+def knn_model(df, split=977, n_neighbors=2, weights="distance", p=2,
+              new_predictions=False, ordinal_prediction_dates=None,
+              original_prediction_dates=None):
+    """
+    Generates a K-Nearest Neighbors model, its corresponding visualization,
+    and a forecast based on user-tunable hyperparameters
+    """
+
+    # Setting the dates to be the index
     df['Date'] = pd.to_datetime(df.Date, format='%Y-%m-%d')
     df.index = df['Date']
 
-    # creating dataframe with date and the target variable
-    data = df.sort_index(ascending=True, axis=0)
-    new_data = pd.DataFrame(index=range(0, len(df)), columns=['Date', 'Close'])
+    # Creating a dataframe with the dates and close prices
+    intermediate = df.sort_index(ascending=True, axis=0)
+    data = intermediate[["Date", "Close"]].copy()
 
-    for i in range(0, len(data)):
-        new_data['Date'][i] = data['Date'][i]
-        new_data['Close'][i] = data['Close'][i]
+    # Changing the date to ordinal format so it can be passed into
+    #   the linear model
+    data["Date"] = pd.to_datetime(data["Date"])
+    data["Date"] = data["Date"].map(datetime.toordinal)
 
-    new_data["Date"] = pd.to_datetime(new_data["Date"])
-    new_data["Date"] = new_data["Date"].map(datetime.toordinal)
-    train = new_data[:split]
-    valid = new_data[split:]
-    preds = []
+    # Splitting the data into training and validation sets
+    train = data[:split]
+    valid = data[split:]
+
+    predictions = []
+
     x_train = train.drop("Close", axis=1)
     y_train = train["Close"]
     x_valid = valid.drop("Close", axis=1)
 
+    # If forecast, add the forecast dates to the validation set
     if(new_predictions == True):
         x_valid = x_valid.append(ordinal_prediction_dates, ignore_index=True)
 
     y_valid = valid["Close"]
 
+    # Defining the KNN model and making predictions with it
     from sklearn import neighbors
     from sklearn.model_selection import GridSearchCV
     from sklearn.preprocessing import MinMaxScaler
 
     scaler = MinMaxScaler(feature_range=(0, 1))
 
-    # scaling data
+    # Scaling data
     x_train_scaled = scaler.fit_transform(x_train)
     x_train = pd.DataFrame(x_train_scaled)
     x_valid_scaled = scaler.fit_transform(x_valid)
     x_valid = pd.DataFrame(x_valid_scaled)
-    print("x_valid before predict")
-    print(x_valid)
 
-    # using gridsearch to find the best parameter for initial model generation
+    # Used gridsearch on the follwing parameter values to find optimal
+    #   parameters for the initial model
 
     # params = {
     #     "n_neighbors": [2, 3, 4, 5, 6, 7, 8, 9],
@@ -257,27 +268,22 @@ def knn_model(df, split=977, n_neighbors=2, weights="distance", p=2, new_predict
 
     # knn_model = GridSearchCV(knn, params, cv=5)
 
-    # fit the model and make predictions
     knn_model.fit(x_train, y_train)
 
-    # gridsearch results for original model were -
+    # Gridsearch results for original model were -
     #     n_neighbors = 2
     #     weights = distance
     #     minkowski metric (p) = 2
 
-    preds = knn_model.predict(x_valid)
-    rmse = 0
+    predictions = knn_model.predict(x_valid)
+    rmse = 777.77  # filler error value
 
+    # Calculate the error if forecast
     if(new_predictions == False):
         rmse = np.sqrt(
-            np.mean(np.power((np.array(y_valid) - np.array(preds)), 2)))
+            np.mean(np.power((np.array(y_valid) - np.array(predictions)), 2)))
 
-    print("Predictions and length")
-    print(len(preds))
-    print(preds)
-
-    # valid["Predictions"] = 0
-    # valid["Predictions"] = preds
+    # K-Nearest Neighbors plot
     fig_knn = go.Figure()
 
     fig_knn.add_trace(go.Scatter(
@@ -294,6 +300,7 @@ def knn_model(df, split=977, n_neighbors=2, weights="distance", p=2, new_predict
         name="Validation"
     ))
 
+    # If forecast, append the forecast dates
     if(new_predictions == True):
         all_prediction_dates = df["Date"][split:]
         all_prediction_dates = all_prediction_dates.append(
@@ -301,14 +308,14 @@ def knn_model(df, split=977, n_neighbors=2, weights="distance", p=2, new_predict
 
         fig_knn.add_trace(go.Scatter(
             x=all_prediction_dates,
-            y=preds,
+            y=predictions,
             mode="lines",
             name="Predictions"
         ))
     else:
         fig_knn.add_trace(go.Scatter(
             x=df["Date"][split:],
-            y=preds,
+            y=predictions,
             mode="lines",
             name="Predictions"
         ))
@@ -318,45 +325,60 @@ def knn_model(df, split=977, n_neighbors=2, weights="distance", p=2, new_predict
     return knn_model, fig_knn, graphJSON, round(rmse, 2)
 
 
-def auto_arima_model(df, split=977, start_p=1, max_p=3, start_q=1, max_q=3, d=1, D=1, new_predictions=False, new_dates=None):
-    import pmdarima as pm
+def auto_arima_model(df, split=977, start_p=1, max_p=3, start_q=1, max_q=3,
+                     d=1, D=1, new_predictions=False, new_dates=None):
+    """
+    Generates an Auto-ARIMA model, its corresponding visualization, and
+    forecast based on user-tunable hyperparameters
+    """
 
+    # Creating a dataframe with the dates and closing price
     df = df.sort_index(ascending=True, axis=0)
-    new_data = df[["Date", "Close"]]
+    data = df[["Date", "Close"]].copy()
 
+    # If forecast, append forecast dates to data
     if(new_predictions):
-        new_data = new_data.append(new_dates, ignore_index=True)
+        data = data.append(new_dates, ignore_index=True)
 
-    # Training-validation splits
+    # Splitting data into training and validation sets
     train = []
     valid = []
 
+    # If forecast, the entirety of data is trained, else the split
+    #   is determined by the selected train : valid ratio
     if(new_predictions):
-        train = new_data[:len(df)]
-        valid = new_data[len(df):]
+        train = data[:len(df)]
+        valid = data[len(df):]
     else:
-        train = new_data[:split]
-        valid = new_data[split:]
+        train = data[:split]
+        valid = data[split:]
 
     training = train['Close']
     validation = valid['Close']
 
-    arima_model = pm.arima.auto_arima(training, start_p=start_p, max_p=max_p, start_q=start_q, max_q=max_q, m=12, start_P=0,
-                                      seasonal=True, d=d, D=D, trace=True, error_action='ignore', suppress_warnings=True)
+    # Defining the arima model and making predictions with it
+    import pmdarima as pm
+
+    arima_model = pm.arima.auto_arima(
+        training, start_p=start_p, max_p=max_p,
+        start_q=start_q, max_q=max_q, m=12, start_P=0,
+        seasonal=True, d=d, D=D, trace=True,
+        error_action='ignore', suppress_warnings=True)
 
     arima_model.fit(training)
 
     arima_forecast = arima_model.predict(n_periods=len(valid))
-    # arima_forecast = arima_model.predict(
-    #    n_periods = 1259 - split)
     arima_forecast = pd.DataFrame(
         arima_forecast, index=valid.index, columns=['Prediction'])
     rmse = 777.77  # filler error value
 
+    # If forecast, calculate the error value
     if(new_predictions == False):
         rmse = np.sqrt(np.mean(
-            np.power((np.array(valid['Close']) - np.array(arima_forecast['Prediction'])), 2)))
+            np.power((np.array(valid['Close']) -
+                      np.array(arima_forecast['Prediction'])), 2)))
 
+    # Auto-ARIMA plot
     fig_arima = go.Figure()
 
     fig_arima.add_trace(go.Scatter(

@@ -2,7 +2,7 @@
 Preprocessing and utility module
 
 This module contains functions that deal with preprocessing and utility
-tasks (reading in data, generating forecast dates).
+tasks (reading in data, generating forecast dates, graph size).
 """
 
 from datetime import datetime
@@ -11,6 +11,8 @@ from datetime import date
 from dateutil.relativedelta import relativedelta
 
 import pandas as pd
+import plotly
+import plotly.graph_objects as go
 
 
 def read_historic_data(ticker):
@@ -53,3 +55,13 @@ def generate_dates_until(year, month, day):
     dates_df = pd.DataFrame(data=dates_dict)
 
     return dates_df
+
+
+"""
+Default figure dimensions for visualizations
+"""
+fig_layout = go.Layout(
+    autosize=False,
+    width=1250,
+    height=500
+)

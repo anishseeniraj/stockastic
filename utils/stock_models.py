@@ -21,19 +21,24 @@ import numpy as np
 import plotly
 import plotly.graph_objects as go
 
+from .stock_preprocess import fig_layout
+
 
 def historic_model(df):
     """
     Returns a plotly visualization of the historic stock price
     """
 
-    data = [go.Candlestick(
-        x=df["Date"],
-        open=df["Open"],
-        high=df["High"],
-        low=df["Low"],
-        close=df["Close"])]
-    graphJSON = json.dumps(data, cls=plotly.utils.PlotlyJSONEncoder)
+    fig = go.Figure(
+        data=[go.Candlestick(
+            x=df["Date"],
+            open=df["Open"],
+            high=df["High"],
+            low=df["Low"],
+            close=df["Close"])],
+        layout=fig_layout
+    )
+    graphJSON = json.dumps(fig, cls=plotly.utils.PlotlyJSONEncoder)
 
     return graphJSON
 
@@ -88,7 +93,7 @@ def moving_average_model(df, window=225, split=977, new_predictions=False, new_d
             np.mean(np.power((np.array(valid['Close']) - predictions), 2)))
 
     # Moving Average Plot
-    fig_ma = go.Figure()
+    fig_ma = go.Figure(layout=fig_layout)
 
     fig_ma.add_trace(go.Scatter(
         x=train["Date"],
@@ -173,7 +178,7 @@ def linear_regression_model(df, split=977):
     train.index = data[:split].index
 
     # Linear Regression plot
-    fig_lm = go.Figure()
+    fig_lm = go.Figure(layout=fig_layout)
 
     fig_lm.add_trace(go.Scatter(
         x=df["Date"],
@@ -284,7 +289,7 @@ def knn_model(df, split=977, n_neighbors=2, weights="distance", p=2,
             np.mean(np.power((np.array(y_valid) - np.array(predictions)), 2)))
 
     # K-Nearest Neighbors plot
-    fig_knn = go.Figure()
+    fig_knn = go.Figure(layout=fig_layout)
 
     fig_knn.add_trace(go.Scatter(
         x=df["Date"],
@@ -379,7 +384,7 @@ def auto_arima_model(df, split=977, start_p=1, max_p=3, start_q=1, max_q=3,
                       np.array(arima_forecast['Prediction'])), 2)))
 
     # Auto-ARIMA plot
-    fig_arima = go.Figure()
+    fig_arima = go.Figure(layout=fig_layout)
 
     fig_arima.add_trace(go.Scatter(
         x=train["Date"],
@@ -521,7 +526,7 @@ def lstm_model(df, split=977, units=50, epochs=1, new_predictions=False,
     valid['Predictions'] = closing_price
 
     # LSTM plot
-    fig_lstm = go.Figure()
+    fig_lstm = go.Figure(layout=fig_layout)
 
     fig_lstm.add_trace(go.Scatter(
         x=df["Date"],

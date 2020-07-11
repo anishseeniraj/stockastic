@@ -28,7 +28,7 @@ ma = Blueprint("ma", __name__)
 @ma.route("/<ticker>/ma/customize/<window>/<split>")
 def ma_customize_input(ticker, window, split):
     """
-    Generates a moving average plot based on the user-inputted parameter
+    Generates a moving average plot based on user-inputted parameter
     values and allows the user to further customize the parameter values
     """
 
@@ -49,7 +49,7 @@ def ma_customize_input(ticker, window, split):
 @ma.route("/ma/customize", methods=["POST"])
 def ma_customize_output():
     """
-    Reads the user-inputted parameter values submitted on the front-end
+    Reads user-inputted parameter values submitted on the front-end
     and redirects to the model-generation route
     """
 
@@ -64,7 +64,7 @@ def ma_customize_output():
 @ma.route("/<ticker>/ma/predict/<window>/<split>")
 def ma_predict_input(ticker, window, split):
     """ 
-    Generates a moving average plot based on the user-inputted parameter
+    Generates a moving average plot based on user-inputted parameter
     values and allows a forecast date to be entered on the front-end
     """
 
@@ -85,7 +85,7 @@ def ma_predict_input(ticker, window, split):
 def ma_predict_output():
     """ 
     Reads the required forecast date and makes predictions with the
-    selected model on the specified forecast date
+    selected model parameters on the specified forecast date
     """
 
     # Form submission - forecast date and model parameters
@@ -98,8 +98,7 @@ def ma_predict_output():
 
     df = read_historic_data(ticker)
 
-    # Generate dates until the forecast date and populate pre-model predictions
-    #   with NaN values
+    # Generate dates for forecast and populate values with NaN
     to_predict = generate_dates_until(int(year), int(month), int(day))
     to_predict["Close"] = np.nan
 

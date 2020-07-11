@@ -1,17 +1,37 @@
-from flask import Blueprint, render_template, Flask, url_for, request, redirect
+"""
+K-Nearest Neighbors router module
+
+This module contains all the back-end routes that deal with the KNN
+predictive model (routes that deal with model-building as well
+as forecasting).
+
+It requires utils.stock_preprocess and utils.stock_models to 
+    -> Preprocess raw stock data
+    -> Execute models and present visualizations
+"""
+
+import json
+
 import pandas as pd
 import numpy as np
 import plotly
 import plotly.graph_objects as go
-import json
+
+from flask import Blueprint, render_template, Flask, url_for, request, redirect
 from utils.stock_preprocess import *
 from utils.stock_models import *
 
+# To be registered in the main router file (app.py)
 knn = Blueprint("knn", __name__)
 
 
 @knn.route("/<ticker>/knn/customize/<split>/<neighbors>/<weights>/<power>")
 def knn_customize_input(ticker, split, neighbors, weights, power):
+    """
+    Generates a KNN plot based on user-inputted hyperparameter values 
+    and allows the user to further customize the hyperparameter values
+    """
+
     df = read_historic_data(ticker)
     k_model, knn_fig, knn_plot, rmse = knn_model(
         df, int(split), int(neighbors), weights, int(power))
@@ -30,6 +50,12 @@ def knn_customize_input(ticker, split, neighbors, weights, power):
 
 @knn.route("/knn/customize", methods=["POST"])
 def knn_customize_output():
+    """
+    Reads user-inputted hyperparameter values submitted on the front-end
+    and redirects to the model-generation route
+    """
+
+    # Form submission - model hyperparameters
     ticker = request.form["ticker"]
     split = request.form["split"]
     neighbors = request.form["neighbors"]
@@ -41,6 +67,11 @@ def knn_customize_output():
 
 @knn.route("/<ticker>/knn/predict/<split>/<neighbors>/<weights>/<power>")
 def knn_predict_input(ticker, split, neighbors, weights, power):
+    """ 
+    Generates a KNN plot based on user-inputted hyperparameter
+    values and allows a forecast date to be entered on the front-end
+    """
+
     df = read_historic_data(ticker)
     k_model, knn_fig, knn_plot, rmse = knn_model(
         df, int(split), int(neighbors), weights, int(power))
@@ -58,7 +89,12 @@ def knn_predict_input(ticker, split, neighbors, weights, power):
 
 @knn.route("/knn/predict", methods=["POST"])
 def knn_predict_output():
-    # Form submission values
+    """
+    Reads the required forecast date and makes predictions with the
+    selected model hyperparameters on the specified forecast date
+    """
+
+    # Form submission values - forecast date and model hyperparameters
     year = request.form["year"]
     month = request.form["month"]
     day = request.form["day"]
@@ -68,38 +104,17 @@ def knn_predict_output():
     weights = request.form["weights"]
     power = request.form["power"]
 
-    # Generating the linear model
     df = read_historic_data(ticker)
 
-    # Generating the date column for predictions
-    # start_date = date.today()
-    # end_date = date(int(year), int(month), int(day))
-    # Range of prediction dates
-    # predict_data = {"Date": pd.date_range(start=start_date, end=end_date)}
-    # DataFrame with original prediction dates
+    # Generating dates for forecast and changing them to ordinal format
     predict_dates = generate_dates_until(int(year), int(month), int(day))
     to_predict_df = generate_dates_until(int(year), int(month), int(day))
     to_predict_df["Date"] = to_predict_df["Date"].map(
-        datetime.toordinal)  # DataFrame with ordinal prediction dates
+        datetime.toordinal)
+
     k_model, knn_fig, knn_plot, rmse = knn_model(
         df, int(split), int(neighbors), weights, int(power), new_predictions=True, ordinal_prediction_dates=to_predict_df, original_prediction_dates=predict_dates)
-
-    # Predicting prices on new dates
     new_predictions = k_model.predict(to_predict_df)
-
-    # print("Predictions from returned model")
-    # print(new_predictions)
-
-    # Plotting predicted prices
-    # knn_fig.add_trace(go.Scatter(
-    #     x=predict_dates["Date"],
-    #     y=new_predictions,
-    #     mode="lines",
-    #     name="Forecast"
-    # ))
-
-    # knn_plot = json.dumps(
-    #     knn_fig, cls=plotly.utils.PlotlyJSONEncoder)
 
     return render_template(
         "knn/knn_predict.html.jinja",

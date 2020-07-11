@@ -1,5 +1,5 @@
 """
-Moving Average router module
+Linear Regression router module
 
 This module contains all the back-end routes that deal with the Linear
 predictive model (routes that deal with model-building as well
@@ -96,7 +96,7 @@ def lr_predict_output():
     linear_model, linear_fig, linear_regression_plot, rmse = linear_regression_model(
         df, int(split))
 
-    # Generate dates for forecast and chaneg them to ordinal format
+    # Generating dates for forecast and changing them to ordinal format
     predict_dates = generate_dates_until(int(year), int(month), int(day))
     to_predict_df = generate_dates_until(int(year), int(month), int(day))
     to_predict_df["Date"] = to_predict_df["Date"].map(

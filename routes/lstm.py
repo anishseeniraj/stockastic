@@ -54,7 +54,7 @@ def lstm_customize_output():
     and redirects to the model-generation route
     """
 
-    # Form submission - model hyperparameters
+    # Form submission values - model hyperparameters
     ticker = request.form["ticker"]
     split = request.form["split"]
     units = request.form["units"]
@@ -108,7 +108,8 @@ def lstm_predict_output():
     to_predict["Close"] = np.nan
 
     lstm, lstm_fig, lstm_plot, rmse = lstm_model(
-        df, int(split), int(units), int(epochs), new_predictions=True, original_predictions=to_predict)
+        df, int(split), int(units), int(epochs), new_predictions=True,
+        original_predictions=to_predict)
 
     return render_template(
         "lstm/lstm_predict.html.jinja",

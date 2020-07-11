@@ -12,7 +12,6 @@ machine learning model) to be registered.
 """
 
 from flask import Flask, render_template, url_for, request, redirect
-
 from utils.stock_preprocess import *
 from utils.stock_models import *
 from routes.ma import ma

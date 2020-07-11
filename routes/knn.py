@@ -1,5 +1,5 @@
 """
-K-Nearest Neighbors router module
+K-Nearest Neighbors (KNN) router module
 
 This module contains all the back-end routes that deal with the KNN
 predictive model (routes that deal with model-building as well
@@ -62,7 +62,8 @@ def knn_customize_output():
     weights = request.form["weights"]
     power = request.form["power"]
 
-    return redirect("/" + ticker + "/knn/customize/" + split + "/" + neighbors + "/" + weights + "/" + power)
+    return redirect("/" + ticker + "/knn/customize/" + split + "/"
+                    + neighbors + "/" + weights + "/" + power)
 
 
 @knn.route("/<ticker>/knn/predict/<split>/<neighbors>/<weights>/<power>")
@@ -113,7 +114,9 @@ def knn_predict_output():
         datetime.toordinal)
 
     k_model, knn_fig, knn_plot, rmse = knn_model(
-        df, int(split), int(neighbors), weights, int(power), new_predictions=True, ordinal_prediction_dates=to_predict_df, original_prediction_dates=predict_dates)
+        df, int(split), int(neighbors), weights, int(power),
+        new_predictions=True, ordinal_prediction_dates=to_predict_df,
+        original_prediction_dates=predict_dates)
     new_predictions = k_model.predict(to_predict_df)
 
     return render_template(

@@ -33,8 +33,8 @@ def lr_customize_input(ticker, split):
     """
 
     df = read_historic_data(ticker)
-    linear_model, linear_fig, linear_regression_plot, rmse = linear_regression_model(
-        df, int(split))
+    linear_model, linear_fig, linear_regression_plot, rmse =
+    linear_regression_model(df, int(split))
 
     return render_template(
         "lr/lr_customize.html.jinja",
@@ -67,8 +67,8 @@ def lr_predict_input(ticker, split):
     """
 
     df = read_historic_data(ticker)
-    linear_model, linear_fig, linear_regression_plot, rmse = linear_regression_model(
-        df, int(split))
+    linear_model, linear_fig, linear_regression_plot, rmse =
+    linear_regression_model(df, int(split))
 
     return render_template(
         "lr/lr_predict.html.jinja",
@@ -93,8 +93,8 @@ def lr_predict_output():
     split = request.form["split"]
 
     df = read_historic_data(ticker)
-    linear_model, linear_fig, linear_regression_plot, rmse = linear_regression_model(
-        df, int(split))
+    linear_model, linear_fig, linear_regression_plot, rmse =
+    linear_regression_model(df, int(split))
 
     # Generating dates for forecast and changing them to ordinal format
     predict_dates = generate_dates_until(int(year), int(month), int(day))

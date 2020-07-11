@@ -1,13 +1,4 @@
-<!DOCTYPE html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Customize Moving Average Model</title>
-    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.6/d3.min.js"></script>
-  </head>
-  <body>
+{% include "/partials/header.html.jinja" %}
     <h1>Customize Moving Average Model for {{ticker}}</h1>
 
     <p>
@@ -42,5 +33,4 @@
     <p>Current training data points - {{split}}/1260 days</p>
 
     <a href="/{{ticker}}/ma/predict/{{window}}/{{split}}">Make a prediction with this model</a>
-  </body>
-</html>
+{% include "/partials/footer.html.jinja" %}

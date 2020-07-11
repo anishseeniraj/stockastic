@@ -1,13 +1,4 @@
-<!DOCTYPE html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>KNN Predictions</title>
-    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.6/d3.min.js"></script>
-  </head>
-  <body>
+{% include "/partials/header.html.jinja" %}
     <h1>{{ticker}} Stock Price Prediction - K Neighbors Regression</h1>
 
     <p>Enter a future date that you want the prediction on</p>
@@ -40,5 +31,4 @@
         Plotly.plot("plot_knn", graphs, {});
       </script>
     </div>
-  </body>
-</html>
+{% include "/partials/footer.html.jinja" %}

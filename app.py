@@ -32,7 +32,7 @@ app.register_blueprint(lstm)
 
 @app.route("/")
 def root():
-    return render_template("index.html")
+    return render_template("index.html.jinja")
 
 
 @app.route("/ticker", methods=["POST"])

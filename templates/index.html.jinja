@@ -1,28 +1,62 @@
-{% include "partials/header.html.jinja" %}
-  <h1>Stockastic</h1>
+{% include "partials/header.html.jinja" %} 
+  <h1 class="ui center aligned header" id="index_header">
+    Stockastic
+  </h1>
 
-  <p>
-    Visualize, model, and predict machine learning models for S&P500 stocks
-    without writing a single line of code!
-  </p>
-
-  <form action="{{url_for('ticker')}}" method="POST">
-    <input
-      type="text"
-      placeholder="Enter stock ticker symbol here"
-      name="ticker"
-    />
+  <div class="ui center aligned container" id="intro_text">
     <p>
-      Select which models you want to generate (note that the LSTM and
-      Auto-ARIMA models take ~3 minutes to generate)
+      Visualize, model, and forecast S&P 500 stocks using machine learning models
+      without writing a single line of code!
     </p>
-    <input type="checkbox" name="ma" value="ma" />Moving Averages<br />
-    <input type="checkbox" name="lr" value="lr" />Linear Regression<br />
-    <input type="checkbox" name="knn" value="knn" />K-Nearest Neighbors<br />
-    <input type="checkbox" name="lstm" value="lstm" />Long Short Term
-    Memory<br />
-    <input type="checkbox" name="arima" value="arima" />Autoregressive
-    Integrated Moving Averages<br />
-    <input type="submit" />
+  </div>
+
+  <form action="{{url_for('ticker')}}" method="POST" id="stock_details">
+    <div class="ui center aligned container">
+      <p id="homepage_prompt">Which stock do you want to analyze?</p>
+      <div class="ui raised very padded text container segment">
+        <label class="homepage_form_text">Enter the stock ticker symbol</label>
+        <div class="ui input mini" id="ticker_input">
+          <input type="text" placeholder="Ex. GOOG" name="ticker"/>
+        </div> 
+        <div class="ui divider"></div>
+        <p class="homepage_form_text">
+          Select which models you want to generate (note that the LSTM and
+          Auto-ARIMA models take ~3 minutes to generate)
+        </p>
+        <div class="ui list">
+          <div class="item">
+            <div class="ui checkbox">
+              <input type="checkbox" name="ma" value="ma">
+              <label class="homepage_form_text">Moving Average</label>
+            </div>
+          </div>
+          <div class="item">
+            <div class="ui checkbox">
+              <input type="checkbox" name="lr" value="lr">
+              <label class="homepage_form_text">Linear Regression</label>
+            </div>
+          </div>
+          <div class="item">
+            <div class="ui checkbox">
+              <input type="checkbox" name="knn" value="knn">
+              <label class="homepage_form_text">K-Nearest Neighbors</label>
+            </div>
+          </div>
+          <div class="item">
+            <div class="ui checkbox">
+              <input type="checkbox" name="lstm" value="lstm">
+              <label class="homepage_form_text">Long Short Term Memory</label>
+            </div>
+          </div>
+          <div class="item">
+            <div class="ui checkbox">
+              <input type="checkbox" name="arima" value="arima">
+              <label class="homepage_form_text">Autoregressive Integrated Moving Average</label>
+            </div>
+          </div> 
+        </div>
+        <button type="submit" class="ui secondary button">Submit</button>
+      </div>
+    </div>
   </form>
 {% include "partials/footer.html.jinja" %}

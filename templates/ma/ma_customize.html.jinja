@@ -2,20 +2,22 @@
     <h1>Customize Moving Average Model for {{ticker}}</h1>
 
     <p>
-      Customize your {{ticker}} moving average model by changing the window of
-      days considered while calculating the moving average and the train-test split ratio for the dataset. 
-      Read more about
-      moving averages <a href"#">here</a>.
-    </p>
+      Customize your {{ticker}} moving average model by changing the
+    </p> 
+    <div>  
+      <p>• window of days considered for the moving average</p>
+      <p>• number of data points in the training and testing set (train : test split ratio)</p>
+    </div>
 
     <form action="/ma/customize" method="POST">
-      <p><label
-        >Enter the number of days you want in your moving average window
-        here</label
-      >
-      <input type="number" placeholder="Ex. 277" name="window" /></p>
-      <p><label>Enter the number of data points you want in your training set</label>
-      <input type="number" placeholder= "Ex. 777" name="split"></p>
+      <p>
+        <label>Enter the number of days you want in your moving average window</label>
+        <input type="number" placeholder="Ex. 277" name="window" />
+      </p>
+      <p>
+        <label>Enter the number of data points you want in your training set</label>
+        <input type="number" placeholder= "Ex. 777" name="split">
+      </p>
       <input type="hidden" name="ticker" value="{{ticker}}" />
       <input type="submit" />
     </form>

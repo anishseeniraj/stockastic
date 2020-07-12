@@ -1,0 +1,30 @@
+#index_header {
+  margin-top: 1rem;
+  font-size: 4rem;
+}
+
+#intro_text {
+  font-size: 2rem;
+}
+
+#homepage_prompt {
+  font-size: 1.5rem;
+}
+
+.homepage_form_text {
+  font-size: 1rem;
+}
+
+#stock_details {
+  margin-top: 2rem;
+  opacity: 0;
+}
+
+#stock_details:hover {
+  opacity:1;
+  transition: opacity 1s linear;
+}
+
+#ticker_input {
+  margin-left: 0.5rem;
+}

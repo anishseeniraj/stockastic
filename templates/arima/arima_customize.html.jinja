@@ -1,80 +1,77 @@
 {% include "/partials/header.html.jinja" %}
-    <h1>Customize Auto-ARIMA model for {{ticker}}</h1>
-
-    <p>
-      It takes extended periods of time to tune the hyperparameters of individual ARIMA models, so I'm using an Auto-ARIMA model which will let you input a range of values for the hyperparameters (listed below) from which it will pick the optimal ones.
-    </p>
-    <ul> 
-      <li>p - Past values used for forecasting future values</li>
-      <li>q - Forecast errors in predicting future values based on p</li>
-      <li>d - Order of first-differencing</li>
-      <li>D - Order of seasonal-differencing</li>
-    </ul>
-    <p>
-      Customize your {{ticker}} Auto-ARIMA model by changing the 
-      <ul>
-        <li>Train-test split ratio for the dataset</li>
-        <li>Range of p to find the optimal value</li>
-        <li>Range of q to find the optimal value</li>
-        <li>d value</li>
-        <li>D value</li>
-      </ul>
-    </p>
-
-    <form action="/arima/customize" method="POST">
-      <p>
-        <label
-          >Enter the number of data points you want in your training set</label
-        >
-        <input type="number" placeholder="Ex. 777" name="split" />
-      </p>
-
-      <p>
-        <label
-          >Enter the range of p values</label
-        >
-        <input type="number" placeholder="Ex. 1" name="start_p" /> to <input type="number" placeholder="Ex. 3" name="max_p" />
-      </p>
-
-      <p>
-        <label
-          >Enter the range of q values</label
-        >
-        <input type="number" placeholder="Ex. 1" name="start_q" /> to <input type="number" placeholder="Ex. 3" name="max_q" />
-      </p>
-
-      <p>
-        <label
-          >Enter the d value</label
-        >
-        <input type="number" placeholder="Ex. 1" name="d">
-      </p>
-
-      <p>
-        <label
-          >Enter the D value</label
-        >
-        <input type="number" placeholder="Ex. 1" name="D">
-      </p>
-
-      <input type="hidden" name="ticker" value="{{ticker}}" />
-      <input type="submit" />
-    </form>
-
-    <div class="chart" id="plot_auto_arima">
-      <script>
-        var graphs = {{auto_arima_plot | safe}};
-
-        Plotly.plot("plot_auto_arima", graphs, {});
-      </script>
+    <h1 class="ui header" id="customize_header">Customize Auto-ARIMA model for {{ticker}}</h1>
+    <p class="homepage_form_text">
+      Customize your {{ticker}} Auto-ARIMA model by changing the
+    </p> 
+    <div class="ui bulleted list">
+      <div class="item homepage_form_text">number of data points in the training and validation sets (train-test split ratio)</div>
+      <div class="item homepage_form_text">number of past values used for forecasting future values (p)</div>
+      <div class="item homepage_form_text">forecasting error to further predict values (q)</div>
+      <div class="item homepage_form_text">order of first-differencing (d)</div>
+      <div class="item homepage_form_text">order of seasonal-differencing (D)</div>
     </div>
 
-    <p>Current error (RMSE) - {{rmse}}</p>
-    <p>Current training data points - {{split}}/1260</p>
-    <p>Current range of p is {{start_p}} - {{max_p}}</p>
-    <p>Current range of q is {{start_q}} - {{max_q}}</p>
-    <p>Current d value - {{d}}</p>
-    <p>Current D value - {{D}}</p>
+    <div class="ui divider"></div>
 
-    <a href="/{{ticker}}/arima/predict/{{split}}/{{start_p}}/{{max_p}}/{{start_q}}/{{max_q}}/{{d}}/{{D}}">Make a prediction with this model</a>
+    <form action="/arima/customize" method="POST" id="customize_form">
+      <div class="ui list">
+        <div class="item">
+          <label class="homepage_form_text">Enter the number of data points you want in your training set</label>
+          <div class="ui input mini" id="ticker_input">
+            <input type="number" placeholder="Ex. 777" name="split"/>
+          </div>
+        </div>
+        <div class="item">
+          <label class="homepage_form_text">Enter the range of p (lower, upper)</label>
+          <div class="ui input mini" id="ticker_input">
+            <input type="number" placeholder="Ex. 1" name="start_p"/>
+            <span class="homepage_form_text">  to  </span>
+            <input type="number" placeholder="Ex. 3" name="max_p"/>
+          </div>
+        </div>
+        <div class="item">
+          <label class="homepage_form_text">Enter the range of q (lower, upper)</label>
+          <div class="ui input mini" id="ticker_input">
+            <input type="number" placeholder="Ex. 1" name="start_q"/>
+            <span class="homepage_form_text">  to  </span>
+            <input type="number" placeholder="Ex. 3" name="max_q"/>
+          </div>
+        </div>
+        <div class="item">
+          <label class="homepage_form_text">Enter the value of d</label>
+          <div class="ui input mini" id="ticker_input">
+            <input type="number" placeholder="Ex. 1" name="d">
+          </div>
+        </div>
+        <div class="item">
+          <label class="homepage_form_text">Enter the value of D</label>
+          <div class="ui input mini" id="ticker_input">
+            <input type="number" placeholder="Ex. 1" name="D"/>
+          </div>
+        </div>
+      <input type="hidden" name="ticker" value="{{ticker}}" />
+      <button type="submit" class="ui positive basic button" id="customize_submit">Submit</button>
+    </form>
+
+    <div class="ui raised very padded segment" id="model_plot">
+      <div class="chart" id="plot_arima">
+        <script>
+          var graphs = {{auto_arima_plot | safe}};
+
+          Plotly.plot("plot_arima", graphs, {});
+        </script>
+      </div>
+    </div>
+
+
+    <p class="homepage_form_text">Current error (RMSE) - {{rmse}}</p>
+    <p class="homepage_form_text">Current training data points - {{split}} / 1259</p>
+    <p class="homepage_form_text">Current range of p is {{start_p}} - {{max_p}}</p>
+    <p class="homepage_form_text">Current range of q is {{start_q}} - {{max_q}}</p>
+    <p class="homepage_form_text">Current d value - {{d}}</p>
+    <p class="homepage_form_text">Current D value - {{D}}</p>
+      
+    <a href="/{{ticker}}/arima/predict/{{split}}/{{start_p}}/{{max_p}}/{{start_q}}/{{max_q}}/{{d}}/{{D}}" class="ui negative basic button" id="predict_button">
+        Make a prediction with this model
+    </a>
 {% include "/partials/footer.html.jinja" %}

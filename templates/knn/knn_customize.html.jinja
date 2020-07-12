@@ -1,66 +1,67 @@
 {% include "/partials/header.html.jinja" %}
-    <h1>Customize K-Nearest Neighbors model for {{ticker}}</h1>
+    <h1 class="ui header" id="customize_header">Customize K-Nearest Neighbors model for {{ticker}}</h1>
 
-    <p>
-      Customize your {{ticker}} K-Neighbors Regression model by 
-      <ul>
-        <li>Changing the train-test split ratio for the dataset</li>
-        <li>Changing the number of neighbors to use for <a href="https://scikit-learn.org/stable/modules/generated/sklearn.neighbors.KNeighborsRegressor.html#sklearn.neighbors.KNeighborsRegressor.kneighbors">kneighbors</a> queries</li>
-        <li>Changing the weight function used for prediction</li>
-        <li>Changing the power parameter (p value) for the Minkowski distance metric</li>
-      </ul>
-    </p>
-
-    <form action="/knn/customize" method="POST">
-      <p>
-        <label
-          >Enter the number of data points you want in your training set</label
-        >
-        <input type="number" placeholder="Ex. 777" name="split" />
-      </p>
-
-      <p>
-        <label
-          >Enter the number of neighbors (n_neighbors value)</label
-        >
-        <input type="number" placeholder="Ex. 5" name="neighbors" />
-      </p>
-
-      <p>
-        <label
-          >Select the weight function you want to apply to neighbors </label
-        >
-        <select name="weights" id="">
-          <option value="uniform">Uniform</option>
-          <option value="distance">Distance (inverse)</option>
-        </select>
-      </p>
-
-      <p>
-        <label
-          >Enter the power parameter (p-value) for the Minkowski distance metric used in the model</label
-        >
-        <input type="number" placeholder="Ex. 2" name="power" />
-      </p>
-
-      <input type="hidden" name="ticker" value="{{ticker}}" />
-      <input type="submit" />
-    </form>
-
-    <div class="chart" id="plot_knn">
-      <script>
-        var graphs = {{knn_plot | safe}};
-
-        Plotly.plot("plot_knn", graphs, {});
-      </script>
+    <p class="homepage_form_text">
+      Customize your {{ticker}} KNN model by changing the
+    </p> 
+    <div class="ui bulleted list">
+      <div class="item homepage_form_text">number of data points in the training and validation set (train-test split ratio)</div>
+      <div class="item homepage_form_text">number of neighbors to use for kneighbors queries</div>
+      <div class="item homepage_form_text">weight function used for prediction</div>
+      <div class="item homepage_form_text">power parameter (p value) for the Minkowski distance metric</div>
     </div>
 
-    <h4>The original parameter values used in the model behind the scenes were determined by using gridsearch</h4>
-    <p>Current error (RMSE) - {{rmse}}</p>
-    <p>Current training data points - {{split}}/1260</p>
-    <p>Current number of neighbors (K) - {{neighbors}}</p>
-    <p>Current weight function - {{weights}}</p>
-    <p>Current power parameter (p-value for the Minkowski distance metric) - {{power}}</p>
+    <div class="ui divider"></div>
 
-    <a href="/{{ticker}}/knn/predict/{{split}}/{{neighbors}}/{{weights}}/{{power}}">Make a prediction with this model</a>
+    <form action="/knn/customize" method="POST" id="customize_form">
+      <div class="ui list">
+        <div class="item">
+          <label class="homepage_form_text">Enter the number of data points you want in your training set</label>
+          <div class="ui input mini" id="ticker_input">
+            <input type="number" placeholder="Ex. 777" name="split"/>
+          </div>
+        </div>
+        <div class="item">
+          <label class="homepage_form_text">Enter the number of neighbors (K)</label>
+          <div class="ui input mini" id="ticker_input">
+            <input type="number" placeholder="Ex. 5" name="neighbors"/>
+          </div>
+        </div>
+        <div class="item">
+          <label class="homepage_form_text">Select the weight function you want to apply to neighbors</label>
+          <select name="weights" id="">
+            <option value="uniform">Uniform</option>
+            <option value="distance">Distance (inverse)</option>
+          </select>
+        </div>
+        <div class="item">
+          <label class="homepage_form_text">Enter the power parameter (p-value) for the Minkowski distance metric used in the model</label>
+          <div class="ui input mini" id="ticker_input">
+            <input type="number" placeholder="Ex. 2" name="power"/>
+          </div>
+        </div>
+      <input type="hidden" name="ticker" value="{{ticker}}" />
+      <button type="submit" class="ui positive basic button" id="customize_submit">Submit</button>
+    </form>
+
+    <div class="ui raised very padded segment" id="model_plot">
+      <div class="chart" id="plot_knn">
+        <script>
+          var graphs = {{knn_plot | safe}};
+
+          Plotly.plot("plot_knn", graphs, {});
+        </script>
+      </div>
+    </div>
+
+
+    <p class="homepage_form_text">Current error (RMSE) - {{rmse}}</p>
+    <p class="homepage_form_text">Current training data points - {{split}} / 1259</p>
+    <p class="homepage_form_text">Current number of neighbors (K) - {{neighbors}}</p>
+    <p class="homepage_form_text">Current weight function - {{weights}}</p>
+    <p class="homepage_form_text">Current power parameter (p-value for the Minkowski distance metric) - {{power}}</p>
+      
+    <a href="/{{ticker}}/knn/predict/{{split}}/{{neighbors}}/{{weights}}/{{power}}" class="ui negative basic button" id="predict_button">
+        Make a prediction with this model
+    </a>
 {% include "/partials/footer.html.jinja" %}

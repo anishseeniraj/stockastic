@@ -1,32 +1,46 @@
 {% include "/partials/header.html.jinja" %}
-    <h1>{{ticker}} Stock Price Prediction - Moving Average</h1>
+  <h1 class="ui header" id="customize_header">{{ticker}} forecast - Moving Average</h1>
 
-    <p>Enter a future date that you want the prediction on</p>
+  <p class="homepage_form_text">
+    Enter a future date that you want to predict the stock price on
+  </p>
 
-    <form action="/ma/predict" method="POST">
-      <label>
-        Enter the year -
-      </label>
-      <input type="number" name="year" placeholder="2020" />
-      <label>
-        Enter the month -
-      </label>
-      <input type="number" name="month" placeholder="12" />
-      <label>
-        Enter the date -
-      </label>
-      <input type="number" name="day" placeholder="31" />
-      <input type="hidden" name="ticker" value="{{ticker}}" />
-      <input type="hidden" name="window" value="{{window}}" />
-      <input type="hidden" name="split" value="{{split}}" />
-      <input type="submit" />
-    </form>
+  <div class="ui divider"></div>
 
-    <div class="chart" id="plot_ma">
-      <script>
-        var graphs = {{ma_plot | safe}};
+  <form action="/ma/predict" method="POST" id="customize_form">
+    <div class="ui list">
+      <div class="item">
+        <label class="homepage_form_text">Enter the year</label>
+        <div class="ui input mini" id="ticker_input">
+          <input type="number" placeholder="Ex. 2021" name="year"/>
+        </div>
+      </div>
+      <div class="item">
+        <label class="homepage_form_text">Enter the month</label>
+        <div class="ui input mini" id="ticker_input">
+          <input type="number" placeholder="Ex. 07" name="month"/>
+        </div>
+      </div>
+      <div class="item">
+        <label class="homepage_form_text">Enter the day</label>
+        <div class="ui input mini" id="ticker_input">
+          <input type="number" placeholder="Ex. 07" name="day"/>
+        </div>
+      </div>
+    <input type="hidden" name="ticker" value="{{ticker}}" />
+    <input type="hidden" name="window" value="{{window}}" />
+    <input type="hidden" name="split" value="{{split}}" />
+    <button type="submit" class="ui positive basic button" id="customize_submit">Submit</button>
+  </form>
 
-        Plotly.plot("plot_ma", graphs, {});
-      </script>
-    </div>
+  
+  <div class="ui raised very padded segment" id="model_plot">
+      <div class="chart" id="plot_ma">
+        <script>
+          var graphs = {{ma_plot | safe}};
+
+          Plotly.plot("plot_ma", graphs, {});
+        </script>
+      </div>
+  </div>
 {% include "/partials/footer.html.jinja" %}

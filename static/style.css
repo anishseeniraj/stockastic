@@ -14,7 +14,7 @@
 }
 
 .homepage_form_text {
-  font-size: 1rem;
+  font-size: 1.25rem;
 }
 
 #stock_details {
@@ -23,7 +23,7 @@
 }
 
 #stock_details:hover {
-  opacity:1;
+  opacity: 1;
   transition: opacity 1s linear;
 }
 
@@ -33,10 +33,28 @@
 
 /* Models */
 
-.model_plot {
-  border: 1px solid black;
+#model_plot {
+  margin-top: 2rem;
+  margin-bottom: 2rem;
 }
 
 #customize_model {
   text-align: center;
+}
+
+/* Customization */
+#customize_header {
+  margin-top: 1rem;
+}
+
+#customize_form {
+  margin-top: 1.5rem;
+}
+
+#customize_submit {
+  margin-top: 1rem;
+}
+
+#predict_button {
+  margin-bottom: 2rem;
 }

@@ -1,56 +1,58 @@
 {% include "/partials/header.html.jinja" %}
-    <h1>Customize Long Short-Term Memory model for {{ticker}}</h1>
+    <h1 class="ui header" id="customize_header">Customize Long Short Term Memory model for {{ticker}}</h1>
 
-    <p>
-      Customize your {{ticker}} LSTM model by changing the 
-      <ul>
-        <li>Train-test split ratio for the dataset</li>
-        <li>Number of units to use in each LSTM layer of the neural network </li>
-        <li>Epochs</li>
-      </ul>
-    </p>
-
-    <form action="/lstm/customize" method="POST">
-      <p>
-        <label
-          >Enter the number of data points you want in your training set</label
-        >
-        <input type="number" placeholder="Ex. 777" name="split" />
-      </p>
-
-      <p>
-        <label
-          >Enter the number of units in each layer of the network</label
-        >
-        <input type="number" placeholder="Ex. 5" name="units" />
-      </p>
-
-      <p>
-        <label
-          >Enter the epochs</label
-        >
-        <input type="number" placeholder="Ex. 3" name="epochs">
-        <div><i>
-          Note that changing the epochs will have a considerable impact on the runtime of the algorithm (up to several minutes)
-        </i></div>
-      </p>
-
-      <input type="hidden" name="ticker" value="{{ticker}}" />
-      <input type="submit" />
-    </form>
-
-    <div class="chart" id="plot_lstm">
-      <script>
-        var graphs = {{lstm_plot | safe}};
-
-        Plotly.plot("plot_lstm", graphs, {});
-      </script>
+    <p class="homepage_form_text">
+      Customize your {{ticker}} LSTM model by changing the
+    </p> 
+    <div class="ui bulleted list">
+      <div class="item homepage_form_text">number of data points in the training and validation set (train-test split ratio)</div>
+      <div class="item homepage_form_text">number of units in each lalyer of the network</div>
+      <div class="item homepage_form_text">number of epochs</div>
     </div>
 
-    <p>Current error (RMSE) - {{rmse}}</p>
-    <p>Current training data points - {{split}}/1260</p>
-    <p>Current number of units - {{units}}</p>
-    <p>Current epochs - {{epochs}}</p>
+    <div class="ui divider"></div>
 
-    <a href="/{{ticker}}/lstm/predict/{{split}}/{{units}}/{{epochs}}">Make a prediction with this model</a>
+    <form action="/lstm/customize" method="POST" id="customize_form">
+      <div class="ui list">
+        <div class="item">
+          <label class="homepage_form_text">Enter the number of data points you want in your training set</label>
+          <div class="ui input mini" id="ticker_input">
+            <input type="number" placeholder="Ex. 777" name="split"/>
+          </div>
+        </div>
+        <div class="item">
+          <label class="homepage_form_text">Enter the number of units in each layer of the network</label>
+          <div class="ui input mini" id="ticker_input">
+            <input type="number" placeholder="Ex. 5" name="units"/>
+          </div>
+        </div>
+        <div class="item">
+          <label class="homepage_form_text">Enter the number of epochs</label>
+          <div class="ui input mini" id="ticker_input">
+            <input type="number" placeholder="Ex. 1" name="epochs"/>
+          </div>
+        </div>
+      <input type="hidden" name="ticker" value="{{ticker}}" />
+      <button type="submit" class="ui positive basic button" id="customize_submit">Submit</button>
+    </form>
+
+    <div class="ui raised very padded segment" id="model_plot">
+      <div class="chart" id="plot_lstm">
+        <script>
+          var graphs = {{lstm_plot | safe}};
+
+          Plotly.plot("plot_lstm", graphs, {});
+        </script>
+      </div>
+    </div>
+
+
+    <p class="homepage_form_text">Current error (RMSE) - {{rmse}}</p>
+    <p class="homepage_form_text">Current training data points - {{split}} / 1259</p>
+    <p class="homepage_form_text">Current number of units - {{units}}</p>
+    <p class="homepage_form_text">Current number of epochs - {{epochs}}</p>
+      
+    <a href="/{{ticker}}/lstm/predict/{{split}}/{{units}}/{{epochs}}" class="ui negative basic button" id="predict_button">
+        Make a prediction with this model
+    </a>
 {% include "/partials/footer.html.jinja" %}

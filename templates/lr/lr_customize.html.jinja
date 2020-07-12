@@ -1,33 +1,42 @@
 {% include "/partials/header.html.jinja" %}
-    <h1>Customize Linear Regression Model for {{ticker}}</h1>
+    <h1 class="ui header" id="customize_header">Customize Linear Regression model for {{ticker}}</h1>
 
-    <p>
-      Customize your {{ticker}} linear regression model by changing the train-test split ratio. Read more about linear regression
-      <a>here</a>.
-    </p>
-
-    <form action="/lr/customize" method="POST">
-      <p>
-        <label
-          >Enter the number of data points you want in your training set</label
-        >
-        <input type="number" placeholder="Ex. 777" name="split" />
-      </p>
-
-      <input type="hidden" name="ticker" value="{{ticker}}" />
-      <input type="submit" />
-    </form>
-
-    <div class="chart" id="plot_lr">
-      <script>
-        var graphs = {{linear_regression_plot | safe}};
-
-        Plotly.plot("plot_lr", graphs, {});
-      </script>
+    <p class="homepage_form_text">
+      Customize your {{ticker}} linear model by changing the
+    </p> 
+    <div class="ui bulleted list">
+      <div class="item homepage_form_text">number of data points in the training and validation set (train-test split ratio)</div>
     </div>
 
-    <p>Current error (RMSE) - {{rmse}}</p>
-    <p>Current training data points - {{split}}/1260</p>
+    <div class="ui divider"></div>
 
-    <a href="/{{ticker}}/lr/predict/{{split}}">Make a prediction with this model</a>
+    <form action="/lr/customize" method="POST" id="customize_form">
+      <div class="ui list">
+        <div class="item">
+          <label class="homepage_form_text">Enter the number of data points you want in your training set</label>
+          <div class="ui input mini" id="ticker_input">
+            <input type="number" placeholder="Ex. 777" name="split"/>
+          </div>
+        </div>
+      <input type="hidden" name="ticker" value="{{ticker}}" />
+      <button type="submit" class="ui positive basic button" id="customize_submit">Submit</button>
+    </form>
+
+    <div class="ui raised very padded segment" id="model_plot">
+      <div class="chart" id="plot_lr">
+        <script>
+          var graphs = {{linear_regression_plot | safe}};
+
+          Plotly.plot("plot_lr", graphs, {});
+        </script>
+      </div>
+    </div>
+
+
+    <p class="homepage_form_text">Current error (RMSE) - {{rmse}}</p>
+    <p class="homepage_form_text">Current training data points - {{split}} / 1259</p>
+      
+    <a href="/{{ticker}}/lr/predict/{{split}}" class="ui negative basic button" id="predict_button">
+        Make a prediction with this model
+    </a>
 {% include "/partials/footer.html.jinja" %}

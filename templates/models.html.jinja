@@ -1,82 +1,106 @@
 {% include "partials/header.html.jinja" %}
-  <h1>{{ticker}} Stock Models</h1>
+  <h1 class="ui center aligned header" id="index_header">
+    {{ticker}} Stock Models
+  </h1>
 
-  <h3>5 Year Performance</h3>
+  <div class="ui raised very padded segment model_plot">
+    <h2>5 Year Performance</h2>
 
-  <div class="chart" id="plot_historic">
-    <script>
-      var graphs = {{historic_plot | safe}};
+    <div class="chart" id="plot_historic">
+      <script>
+        var graphs = {{historic_plot | safe}};
 
-      Plotly.plot("plot_historic", graphs, {});
-    </script>
+        Plotly.plot("plot_historic", graphs, {});
+      </script>
+    </div>
   </div>
 
   {% if show_plot["ma"] %}
-    <h3>Moving Average</h3>
+    <div class="ui raised very padded segment model_plot">
+      <h2>Moving Average</h2>
     
-    <div class="chart" id="plot_ma">
-      <script>
-        var graphs = {{moving_average_plot | safe}};
+      <div class="chart" id="plot_ma">
+        <script>
+          var graphs = {{moving_average_plot | safe}};
 
-        Plotly.plot("plot_ma", graphs, {});
-      </script>
+          Plotly.plot("plot_ma", graphs, {});
+        </script>
+      </div>
+
+      <a href="/{{ticker}}/ma/customize/225/977">
+        <button class="ui primary basic button">Build your own Moving Average model</button>
+      </a>
     </div>
-
-    <a href="/{{ticker}}/ma/customize/225/977">Build your own Moving Average model</a>
   {% endif %}
 
   {% if show_plot["lr"] %}
-    <h3>Linear Regression</h3>
+    <div class="ui raised very padded segment model_plot">
+      <h2>Linear Regression</h2>
     
-    <div class="chart" id="plot_lr">
-      <script>
-        var graphs = {{linear_regression_plot | safe}};
+      <div class="chart" id="plot_lr">
+        <script>
+          var graphs = {{linear_regression_plot | safe}};
 
-        Plotly.plot("plot_lr", graphs, {});
-      </script>
+          Plotly.plot("plot_lr", graphs, {});
+        </script>
+      </div>
+
+      <a href="/{{ticker}}/lr/customize/977">
+        <button class="ui primary basic button">Build your own Linear Regression model</button>
+      </a>
     </div>
-
-    <a href="/{{ticker}}/lr/customize/977">Build your own Linear Regression model</a>
   {% endif %}
 
   {% if show_plot["knn"] %}
-    <h3>K-Nearest Neighbors</h3>
+    <div class="ui raised very padded segment model_plot">
+      <h2>K-Nearest Neighbors</h2>
     
-    <div class="chart" id="plot_knn">
-      <script>
-        var graphs = {{knn_plot | safe}};
+      <div class="chart" id="plot_knn">
+        <script>
+          var graphs = {{knn_plot | safe}};
 
-        Plotly.plot("plot_knn", graphs, {});
-      </script>
+          Plotly.plot("plot_knn", graphs, {});
+        </script>
+      </div>
+
+      <a href="/{{ticker}}/knn/customize/977/5/uniform/2">
+        <button class="ui primary basic button">Build your own Moving Average model</button>
+      </a>
     </div>
-
-    <a href="/{{ticker}}/knn/customize/977/5/uniform/2">Build your own KNN model</a>
   {% endif %}
     
   {% if show_plot["lstm"] %}
-    <h3>LSTM</h3>
+    <div class="ui raised very padded segment model_plot">
+      <h2>LSTM</h2>
     
-    <div class="chart" id="plot_lstm">
-      <script>
-        var graphs = {{lstm_plot | safe}};
+      <div class="chart" id="plot_lstm">
+        <script>
+          var graphs = {{lstm_plot | safe}};
 
-        Plotly.plot("plot_lstm", graphs, {});
-      </script>
+          Plotly.plot("plot_lstm", graphs, {});
+        </script>
+      </div>
+
+      <a href="/{{ticker}}/lstm/customize/977/50/1">
+        <button class="ui primary basic button">Build your own Moving Average model</button>
+      </a>
     </div>
-
-    <a href="/{{ticker}}/lstm/customize/977/50/1">Build your own LSTM model</a>
   {% endif %}
 
   {% if show_plot["arima"] %}
-    <h3>Auto-ARIMA</h3>
-      <div class="chart" id="plot_auto_arima">
-      <script>
-        var graphs = {{auto_arima_plot | safe}};
+    <div class="ui raised very padded segment model_plot">
+      <h2>Auto-ARIMA</h2>
+        <div class="chart" id="plot_auto_arima">
+        <script>
+          var graphs = {{auto_arima_plot | safe}};
 
-        Plotly.plot("plot_auto_arima", graphs, {});
-      </script>
+          Plotly.plot("plot_auto_arima", graphs, {});
+        </script>
+      </div>
+
+      <a href="/{{ticker}}/arima/customize/977/1/3/1/3/1/1">
+        <button class="ui primary basic button">Build your own Moving Average model</button>
+      </a>
     </div>
-
-    <a href="/{{ticker}}/arima/customize/977/1/3/1/3/1/1">Build your own Auto-ARIMA model</a>
   {% endif %}
-{% include "partials/footer.html.jinja" %}  
+{% include "partials/footer.html.jinja" %}

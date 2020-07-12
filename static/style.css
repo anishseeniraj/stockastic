@@ -1,3 +1,5 @@
+/* Home */
+
 #index_header {
   margin-top: 1rem;
   font-size: 4rem;
@@ -27,4 +29,14 @@
 
 #ticker_input {
   margin-left: 0.5rem;
+}
+
+/* Models */
+
+.model_plot {
+  border: 1px solid black;
+}
+
+#customize_model {
+  text-align: center;
 }

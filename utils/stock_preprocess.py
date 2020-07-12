@@ -62,6 +62,6 @@ Default figure dimensions for visualizations
 """
 fig_layout = go.Layout(
     autosize=False,
-    width=1250,
-    height=500
+    width=1000,
+    height=400
 )

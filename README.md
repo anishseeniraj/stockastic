@@ -185,7 +185,7 @@ def generate_dates_until(year, month, day):
 ## Scope of Improvement
 There's certainly a ton of changes that can be implemented to better the application. I plan to attempt implementing/further exploring some of these changes over the new few months (roughly in this order)
 <li>The current runtime of the LSTM and Auto-ARIMA models are about 45s and 3m respectively. This isn't ideal as I envisioned the feedback for this application being almost instantaneous - Will probably look into running these models using cloud TPUs</li>
-<li>Quality and quantity of customizable hyperparameters - This can certainly be improved by feature engineering, exploring deeper built-in hyperparameters etc.</li>
+<li>Quality and quantity of customizable hyperparameters - This can certainly be improved by feature engineering, exploring deeper built-in hyperparameters etc. (Currently thinking of engineering a "news" feature for each company and extracting market performance details using NLP techniques to obtain better prediction results).</li>
 <li>Cleaner forecasting pipeline - The current forecasting process involves the generation of a DataFrame devoted to dates and having to send it over to the model. This seems a bit inefficient. Could probably return the model instead and call the model using the date of interest</li>
 <li>Adding more models</li>
 <li>App styling</li>
